@@ -1,3 +1,3 @@
 # Crowspeak
 
-This will be the WebApp wrapper for the Crowspeak Engine
+This will be the WebApp for the Crowspeak Engine
