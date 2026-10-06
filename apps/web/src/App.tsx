@@ -1,7 +1,7 @@
-import { useRef } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
-import { Stats } from "@react-three/drei";
-import type { Mesh } from "three";
+import { useRef } from 'react'
+import { Canvas, useFrame } from '@react-three/fiber'
+import { Stats } from '@react-three/drei'
+import type { Mesh } from 'three'
 
 function SpinningCube() {
   const ref = useRef<Mesh>(null)
