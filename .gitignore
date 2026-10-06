@@ -1,1 +1,8 @@
 /apps/web/docs_claude
+
+node_modules
+dist
+.vercel
+.env*
+.DS_Store
+Thumbs.db
