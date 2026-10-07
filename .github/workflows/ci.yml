@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Least privilege: jobs only read the repo.
+permissions:
+  contents: read
+
+jobs:
+  # ─── pre-commit ───────────────────────────────────────────────────────────
+  # Runs gitleaks + hygiene hooks so `git commit --no-verify` is caught.
+  # The oxlint-web and prettier-web hooks are skipped here: they need
+  # node_modules, and the `web` job below runs the same checks as plain npm steps.
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # gitleaks scans full history
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+      - uses: pre-commit/action@2c7b3805fd2a0fd8c1884dcaebf91fc102a13ecd # v3.0.1
+        env:
+          SKIP: oxlint-web,prettier-web
+
+  # ─── web ──────────────────────────────────────────────────────────────────
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      # build includes `tsc -b`
+      - run: npm run build
+      # Dependency CVE audit. Any ignore needs an inline reason and a revisit date.
+      - run: npm audit --audit-level=high --omit=dev
+      # PLACEHOLDER: add `- run: npm test` once a test runner (vitest) exists.
+
+  # SAST for JS/TS: enable CodeQL default setup in repo settings (see handover
+  # checklist) rather than adding a workflow here.
+
+  # ─── PLACEHOLDER: container scan ──────────────────────────────────────────
+  # Enable when a Dockerfile exists. Scan BEFORE any push.
+  # container:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+  #     - run: docker build -t crowspeak:ci .
+  #     - uses: aquasecurity/trivy-action@<full-sha> # vX.Y.Z (pin when enabling)
+  #       with:
+  #         image-ref: crowspeak:ci
+  #         exit-code: "1"
+  #         severity: CRITICAL
+  #         ignore-unfixed: true
+
+  # ─── PLACEHOLDER: IaC scan ────────────────────────────────────────────────
+  # Enable when Terraform/Bicep exists (planned under infra/). Keep the checkov
+  # skip list documented in a config file.
+  # infra:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+  #     - run: pipx run checkov==<pinned> -d infra/ --compact --quiet --config-file infra/.checkov.yaml
