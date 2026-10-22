@@ -1,0 +1,24 @@
+Copyright (c) 2026 dunbarchara. All rights reserved.
+
+This repository is publicly visible for transparency only. It is NOT open source.
+
+No license is granted to use, copy, modify, merge, publish, distribute, sublicense,
+host, or sell this software or any part of it, including its source code, 3D assets,
+artwork, and infrastructure configuration, except as expressly permitted in writing
+by the copyright holder.
+
+Viewing the source and, where the hosting platform's terms of service allow it,
+forking the repository for the purpose of viewing or proposing changes through that
+platform are permitted. Nothing here permits running your own copy of the application,
+offering it as a service, or reusing its code or assets in another project.
+
+The CrowSpeak name, logo, and branding are not licensed for any use.
+
+Third-party components used by this project, including the open-source
+crowspeak-engine package (Apache License 2.0), remain under their own licenses.
+This notice does not alter those licenses.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY ARISING FROM THE USE OF THE SOFTWARE.
