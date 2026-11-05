@@ -9,7 +9,7 @@ Related: the workspace-level strategy doc (`docs/crowspeak_architecture_strategy
 ## 1. Context
 
 - **`crowspeak-core`** (public): Python engine (`crowspeak-engine`), FastAPI gateway, reference CLI, WebSocket protocol schemas. It owns the speech pipeline (STT → LLM → TTS).
-- **`crowspeak`** (this repo): the 3D web client, plus future auth/billing backend and infrastructure code.
+- **`crowspeak`** (this repo): the web client (a 2D world since 2026-11-04, previously 3D), plus future auth/billing backend and infrastructure code.
 - The two are decoupled by a **WebSocket protocol**. The frontend consumes structured domain events (`TranscriptDelta`, `AgentAudioChunk`, `ExpressionChange`, `GrammarFeedback`) and never needs to know how the engine works.
 
 ### Repo visibility
@@ -37,6 +37,8 @@ The workspace strategy doc describes `crowspeak` as private. **This repo is publ
 
 ### 2.2 3D stack
 
+> **Superseded 2026-11-04** by the 2D direction in [`FRONTEND_2D_DIRECTION.md`](./FRONTEND_2D_DIRECTION.md) (Phaser + React). Kept as history.
+
 - `three` for rendering and `@react-three/fiber` (R3F) for the declarative React layer.
 - `@react-three/drei` for helpers (`useGLTF`, `Html`, `Environment`, `Stats`).
 - **Assets:** low-poly `.glb`, compressed with Draco or meshopt, served from `public/` via the CDN. Custom shaders for the stylized look.
@@ -44,6 +46,8 @@ The workspace strategy doc describes `crowspeak` as private. **This repo is publ
 - **Package manager:** npm for now. Move to pnpm workspaces when there's more than one package to share code between.
 
 ### 2.3 Scene and HUD split
+
+> **Superseded in part 2026-11-04.** The two-layer split and the state boundary still hold, with a Phaser canvas replacing the R3F `<Canvas>`. See [`FRONTEND_2D_DIRECTION.md`](./FRONTEND_2D_DIRECTION.md) section 4. The R3F specifics below (`useFrame`, drei `<Html>`, `occlude`) are history.
 
 The UI has two layers, and they should stay separate:
 
@@ -85,6 +89,8 @@ crowspeak/
 - Engine/WebSocket integration goes in its own module (`src/engine/` when it exists), so the protocol is the only coupling point.
 
 ## 3. World model
+
+> **Superseded 2026-11-04.** The planet world is replaced by a 2D tile-based world with versioned world definitions. See [`FRONTEND_2D_DIRECTION.md`](./FRONTEND_2D_DIRECTION.md) sections 5 and 6. The text below is kept as history.
 
 The world is a small planet. The core technique, described in detail in `apps/web/docs_claude/SPIKE_OVERVIEW.md`:
 
@@ -173,3 +179,4 @@ The 3D world and the speech pipeline are developed independently and meet at the
 | 2026-10-06 | `crowspeak` repo is public (supersedes "private" in the workspace strategy doc). |
 | 2026-10-06 | Frontend hosting stays platform-neutral (static `dist/` only, no Vercel-specific features). Vercel for now, with a migration path to Cloudflare Pages, Netlify or Azure before commercial launch. See 5.1. |
 | 2026-10-06 | npm for package management. No physics engine for the spike; radial gravity plus analytic height function. |
+| 2026-11-04 | Frontend pivots from R3F 3D to a 2D walkable world (Phaser + React). Sections 2.2, 2.3 (in part) and 3 are superseded. See [`FRONTEND_2D_DIRECTION.md`](./FRONTEND_2D_DIRECTION.md). |
