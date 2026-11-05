@@ -10,3 +10,22 @@ body {
   overflow: hidden;
   background: #111;
 }
+
+.app,
+.world,
+.hud {
+  position: absolute;
+  inset: 0;
+}
+
+/* The HUD sits over the canvas; only its controls take pointer events. */
+.hud {
+  pointer-events: none;
+  padding: 12px;
+  color: #222;
+  font-family: system-ui, sans-serif;
+}
+
+.hud button {
+  pointer-events: auto;
+}
