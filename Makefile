@@ -5,7 +5,7 @@
 #   make install           # one-time: npm ci + install git hooks
 #   make check             # everything CI runs
 #   make check-pre-commit  # hooks only (gitleaks, hygiene)
-#   make check-web         # lint, format check, build (tsc), npm audit
+#   make check-web         # lint, format check, build (tsc), vitest, npm audit
 #
 # Prerequisites: node/npm, pre-commit.
 
@@ -33,5 +33,7 @@ check-web:
 	npm --prefix apps/web run format:check
 	@echo "── build (tsc + vite) ──"
 	npm --prefix apps/web run build
+	@echo "── vitest ──"
+	npm --prefix apps/web test
 	@echo "── npm audit ──"
 	npm --prefix apps/web audit --audit-level=high --omit=dev
