@@ -18,19 +18,19 @@
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "simplex-noise": "^4.0.3",
-    "three": "^0.186.1",
+    "three": "^0.187.0",
     "zustand": "^5.0.16"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
-    "@types/three": "^0.186.0",
-    "@vitejs/plugin-react": "^6.1.1",
+    "@types/three": "^0.187.0",
+    "@vitejs/plugin-react": "^6.2.1",
     "leva": "^0.10.1",
-    "oxlint": "^1.90.0",
+    "oxlint": "^1.91.0",
     "prettier": "^3.9.10",
     "typescript": "~7.0.2",
-    "vite": "^8.3.5"
+    "vite": "^8.3.6"
   }
 }
