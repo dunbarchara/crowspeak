@@ -1,0 +1,538 @@
+{
+  "compressionlevel": -1,
+  "height": 37,
+  "width": 49,
+  "infinite": false,
+  "orientation": "orthogonal",
+  "renderorder": "right-down",
+  "tiledversion": "1.11.0",
+  "version": "1.10",
+  "type": "map",
+  "tilewidth": 32,
+  "tileheight": 32,
+  "tilesets": [],
+  "layers": [
+    {
+      "id": 1,
+      "name": "regions",
+      "type": "objectgroup",
+      "draworder": "topdown",
+      "opacity": 1,
+      "visible": true,
+      "x": 0,
+      "y": 0,
+      "objects": [
+        {
+          "id": 1,
+          "name": "terrace",
+          "type": "",
+          "x": 192,
+          "y": 32,
+          "width": 896,
+          "height": 192,
+          "rotation": 0,
+          "visible": true,
+          "properties": [{ "name": "level", "type": "int", "value": 1 }]
+        },
+        {
+          "id": 2,
+          "name": "lower-plaza",
+          "type": "",
+          "x": 32,
+          "y": 256,
+          "width": 1216,
+          "height": 608,
+          "rotation": 0,
+          "visible": true,
+          "properties": [{ "name": "level", "type": "int", "value": 0 }]
+        },
+        {
+          "id": 24,
+          "name": "east-arm",
+          "type": "",
+          "x": 1280,
+          "y": 256,
+          "width": 288,
+          "height": 640,
+          "rotation": 0,
+          "visible": true,
+          "properties": [{ "name": "level", "type": "int", "value": 1 }]
+        },
+        {
+          "id": 25,
+          "name": "south-arm",
+          "type": "",
+          "x": 32,
+          "y": 896,
+          "width": 1536,
+          "height": 288,
+          "rotation": 0,
+          "visible": true,
+          "properties": [{ "name": "level", "type": "int", "value": 1 }]
+        },
+        {
+          "id": 26,
+          "name": "bridge",
+          "type": "",
+          "x": 448,
+          "y": 224,
+          "width": 64,
+          "height": 672,
+          "rotation": 0,
+          "visible": true,
+          "properties": [
+            { "name": "level", "type": "int", "value": 1 },
+            { "name": "elevated", "type": "bool", "value": true }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "footprints",
+      "type": "objectgroup",
+      "draworder": "topdown",
+      "opacity": 1,
+      "visible": true,
+      "x": 0,
+      "y": 0,
+      "objects": [
+        {
+          "id": 3,
+          "name": "fountain",
+          "type": "",
+          "x": 576,
+          "y": 576,
+          "width": 128,
+          "height": 32,
+          "rotation": 0,
+          "visible": true,
+          "properties": [{ "name": "level", "type": "int", "value": 0 }]
+        },
+        {
+          "id": 4,
+          "name": "building-west",
+          "type": "",
+          "x": 96,
+          "y": 448,
+          "width": 224,
+          "height": 64,
+          "rotation": 0,
+          "visible": true,
+          "properties": [{ "name": "level", "type": "int", "value": 0 }]
+        },
+        {
+          "id": 5,
+          "name": "building-east",
+          "type": "",
+          "x": 960,
+          "y": 448,
+          "width": 224,
+          "height": 64,
+          "rotation": 0,
+          "visible": true,
+          "properties": [{ "name": "level", "type": "int", "value": 0 }]
+        },
+        {
+          "id": 6,
+          "name": "cottage-sw",
+          "type": "",
+          "x": 128,
+          "y": 704,
+          "width": 128,
+          "height": 64,
+          "rotation": 0,
+          "visible": true,
+          "properties": [{ "name": "level", "type": "int", "value": 0 }]
+        },
+        {
+          "id": 7,
+          "name": "hall-terrace",
+          "type": "",
+          "x": 416,
+          "y": 128,
+          "width": 192,
+          "height": 64,
+          "rotation": 0,
+          "visible": true,
+          "properties": [{ "name": "level", "type": "int", "value": 1 }]
+        },
+        {
+          "id": 8,
+          "name": "arch-left",
+          "type": "",
+          "x": 832,
+          "y": 704,
+          "width": 32,
+          "height": 32,
+          "rotation": 0,
+          "visible": true,
+          "properties": [{ "name": "level", "type": "int", "value": 0 }]
+        },
+        {
+          "id": 9,
+          "name": "arch-right",
+          "type": "",
+          "x": 928,
+          "y": 704,
+          "width": 32,
+          "height": 32,
+          "rotation": 0,
+          "visible": true,
+          "properties": [{ "name": "level", "type": "int", "value": 0 }]
+        },
+        {
+          "id": 10,
+          "name": "npc-demo",
+          "type": "",
+          "x": 368,
+          "y": 528,
+          "width": 64,
+          "height": 64,
+          "rotation": 0,
+          "visible": true,
+          "properties": [{ "name": "level", "type": "int", "value": 0 }]
+        },
+        {
+          "id": 27,
+          "name": "tower-south",
+          "type": "",
+          "x": 800,
+          "y": 1056,
+          "width": 192,
+          "height": 64,
+          "rotation": 0,
+          "visible": true,
+          "properties": [{ "name": "level", "type": "int", "value": 1 }]
+        },
+        {
+          "id": 28,
+          "name": "hut-east",
+          "type": "",
+          "x": 1376,
+          "y": 512,
+          "width": 160,
+          "height": 64,
+          "rotation": 0,
+          "visible": true,
+          "properties": [{ "name": "level", "type": "int", "value": 1 }]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "stairs",
+      "type": "objectgroup",
+      "draworder": "topdown",
+      "opacity": 1,
+      "visible": true,
+      "x": 0,
+      "y": 0,
+      "objects": [
+        {
+          "id": 11,
+          "name": "main-stairs",
+          "type": "",
+          "x": 576,
+          "y": 192,
+          "width": 128,
+          "height": 128,
+          "rotation": 0,
+          "visible": true,
+          "properties": [
+            { "name": "low", "type": "int", "value": 0 },
+            { "name": "high", "type": "int", "value": 1 },
+            { "name": "highEdge", "type": "string", "value": "n" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "props",
+      "type": "objectgroup",
+      "draworder": "topdown",
+      "opacity": 1,
+      "visible": true,
+      "x": 0,
+      "y": 0,
+      "objects": [
+        {
+          "id": 12,
+          "name": "cliff-west",
+          "type": "",
+          "x": 192,
+          "y": 224,
+          "width": 384,
+          "height": 32,
+          "rotation": 0,
+          "visible": true,
+          "properties": [
+            { "name": "kind", "type": "string", "value": "cliff" },
+            { "name": "level", "type": "int", "value": 1 }
+          ]
+        },
+        {
+          "id": 13,
+          "name": "cliff-east",
+          "type": "",
+          "x": 704,
+          "y": 224,
+          "width": 384,
+          "height": 32,
+          "rotation": 0,
+          "visible": true,
+          "properties": [
+            { "name": "kind", "type": "string", "value": "cliff" },
+            { "name": "level", "type": "int", "value": 1 }
+          ]
+        },
+        {
+          "id": 14,
+          "name": "fountain",
+          "type": "",
+          "x": 560,
+          "y": 512,
+          "width": 160,
+          "height": 96,
+          "rotation": 0,
+          "visible": true,
+          "properties": [
+            { "name": "kind", "type": "string", "value": "fountain" },
+            { "name": "level", "type": "int", "value": 0 },
+            { "name": "footprint", "type": "string", "value": "fountain" }
+          ]
+        },
+        {
+          "id": 15,
+          "name": "building-west",
+          "type": "",
+          "x": 96,
+          "y": 352,
+          "width": 224,
+          "height": 160,
+          "rotation": 0,
+          "visible": true,
+          "properties": [
+            { "name": "kind", "type": "string", "value": "building" },
+            { "name": "level", "type": "int", "value": 0 },
+            { "name": "footprint", "type": "string", "value": "building-west" }
+          ]
+        },
+        {
+          "id": 16,
+          "name": "building-east",
+          "type": "",
+          "x": 960,
+          "y": 352,
+          "width": 224,
+          "height": 160,
+          "rotation": 0,
+          "visible": true,
+          "properties": [
+            { "name": "kind", "type": "string", "value": "building" },
+            { "name": "level", "type": "int", "value": 0 },
+            { "name": "footprint", "type": "string", "value": "building-east" }
+          ]
+        },
+        {
+          "id": 17,
+          "name": "cottage-sw",
+          "type": "",
+          "x": 128,
+          "y": 640,
+          "width": 128,
+          "height": 128,
+          "rotation": 0,
+          "visible": true,
+          "properties": [
+            { "name": "kind", "type": "string", "value": "building" },
+            { "name": "level", "type": "int", "value": 0 },
+            { "name": "footprint", "type": "string", "value": "cottage-sw" }
+          ]
+        },
+        {
+          "id": 18,
+          "name": "hall-terrace",
+          "type": "",
+          "x": 416,
+          "y": 64,
+          "width": 192,
+          "height": 128,
+          "rotation": 0,
+          "visible": true,
+          "properties": [
+            { "name": "kind", "type": "string", "value": "building" },
+            { "name": "level", "type": "int", "value": 1 },
+            { "name": "footprint", "type": "string", "value": "hall-terrace" }
+          ]
+        },
+        {
+          "id": 19,
+          "name": "arch-left",
+          "type": "",
+          "x": 832,
+          "y": 640,
+          "width": 32,
+          "height": 96,
+          "rotation": 0,
+          "visible": true,
+          "properties": [
+            { "name": "kind", "type": "string", "value": "pillar" },
+            { "name": "level", "type": "int", "value": 0 },
+            { "name": "footprint", "type": "string", "value": "arch-left" }
+          ]
+        },
+        {
+          "id": 20,
+          "name": "arch-right",
+          "type": "",
+          "x": 928,
+          "y": 640,
+          "width": 32,
+          "height": 96,
+          "rotation": 0,
+          "visible": true,
+          "properties": [
+            { "name": "kind", "type": "string", "value": "pillar" },
+            { "name": "level", "type": "int", "value": 0 },
+            { "name": "footprint", "type": "string", "value": "arch-right" }
+          ]
+        },
+        {
+          "id": 21,
+          "name": "npc-demo",
+          "type": "",
+          "x": 368,
+          "y": 528,
+          "width": 64,
+          "height": 64,
+          "rotation": 0,
+          "visible": true,
+          "properties": [
+            { "name": "kind", "type": "string", "value": "npc" },
+            { "name": "level", "type": "int", "value": 0 },
+            { "name": "footprint", "type": "string", "value": "npc-demo" },
+            { "name": "npc", "type": "string", "value": "npc-demo" }
+          ]
+        },
+        {
+          "id": 29,
+          "name": "cliff-south",
+          "type": "",
+          "x": 32,
+          "y": 864,
+          "width": 1248,
+          "height": 32,
+          "rotation": 0,
+          "visible": true,
+          "properties": [
+            { "name": "kind", "type": "string", "value": "cliff" },
+            { "name": "level", "type": "int", "value": 1 }
+          ]
+        },
+        {
+          "id": 30,
+          "name": "cliff-east",
+          "type": "",
+          "x": 1248,
+          "y": 256,
+          "width": 32,
+          "height": 608,
+          "rotation": 0,
+          "visible": true,
+          "properties": [
+            { "name": "kind", "type": "string", "value": "cliff" },
+            { "name": "level", "type": "int", "value": 1 }
+          ]
+        },
+        {
+          "id": 31,
+          "name": "tower-south",
+          "type": "",
+          "x": 800,
+          "y": 960,
+          "width": 192,
+          "height": 160,
+          "rotation": 0,
+          "visible": true,
+          "properties": [
+            { "name": "kind", "type": "string", "value": "building" },
+            { "name": "level", "type": "int", "value": 1 },
+            { "name": "footprint", "type": "string", "value": "tower-south" }
+          ]
+        },
+        {
+          "id": 32,
+          "name": "hut-east",
+          "type": "",
+          "x": 1376,
+          "y": 448,
+          "width": 160,
+          "height": 128,
+          "rotation": 0,
+          "visible": true,
+          "properties": [
+            { "name": "kind", "type": "string", "value": "building" },
+            { "name": "level", "type": "int", "value": 1 },
+            { "name": "footprint", "type": "string", "value": "hut-east" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "overhead",
+      "type": "objectgroup",
+      "draworder": "topdown",
+      "opacity": 1,
+      "visible": true,
+      "x": 0,
+      "y": 0,
+      "objects": [
+        {
+          "id": 22,
+          "name": "arch-top",
+          "type": "",
+          "x": 832,
+          "y": 608,
+          "width": 128,
+          "height": 48,
+          "rotation": 0,
+          "visible": true,
+          "properties": [
+            { "name": "kind", "type": "string", "value": "arch-top" },
+            { "name": "level", "type": "int", "value": 0 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "spawns",
+      "type": "objectgroup",
+      "draworder": "topdown",
+      "opacity": 1,
+      "visible": true,
+      "x": 0,
+      "y": 0,
+      "objects": [
+        {
+          "id": 23,
+          "name": "player",
+          "type": "",
+          "x": 640,
+          "y": 760,
+          "width": 0,
+          "height": 0,
+          "point": true,
+          "rotation": 0,
+          "visible": true,
+          "properties": [{ "name": "level", "type": "int", "value": 0 }]
+        }
+      ]
+    }
+  ],
+  "nextlayerid": 7,
+  "nextobjectid": 33
+}
