@@ -531,8 +531,33 @@
           "properties": [{ "name": "level", "type": "int", "value": 0 }]
         }
       ]
+    },
+    {
+      "id": 7,
+      "name": "npc-anchors",
+      "type": "objectgroup",
+      "draworder": "topdown",
+      "opacity": 1,
+      "visible": true,
+      "x": 0,
+      "y": 0,
+      "objects": [
+        {
+          "id": 33,
+          "name": "npc-demo",
+          "type": "",
+          "x": 400,
+          "y": 592,
+          "width": 0,
+          "height": 0,
+          "point": true,
+          "rotation": 0,
+          "visible": true,
+          "properties": [{ "name": "level", "type": "int", "value": 0 }]
+        }
+      ]
     }
   ],
-  "nextlayerid": 7,
-  "nextobjectid": 33
+  "nextlayerid": 8,
+  "nextobjectid": 34
 }

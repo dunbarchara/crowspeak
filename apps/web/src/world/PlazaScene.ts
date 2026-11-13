@@ -7,17 +7,17 @@ import {
 } from '../lib/depth';
 import type { Vec2 } from '../lib/geometry';
 import { cellToWorld, worldToCell } from '../lib/grid';
-import { levelAtCell, resolveLevel } from '../lib/levels';
+import { type LevelWorld, levelAtCell, resolveLevel } from '../lib/levels';
 import {
   advanceAlongPath,
   inputToVelocity,
   moveWithCollision,
 } from '../lib/movement';
 import { findLevelPath } from '../lib/pathfinding';
-import { parseTiledWorld, toLevelWorld } from '../lib/world';
+import type { WorldDefinition } from '../lib/world';
+import type { LoadedWorld } from '../lib/worldLoader';
 import { appEvents } from '../store/channel';
 import { useGameStore } from '../store/useGameStore';
-import plazaMap from './maps/plaza.json';
 import { PLAYER_FOOTPRINT, Player } from './Player';
 import { virtualStick } from './virtualStick';
 
@@ -48,14 +48,8 @@ const FILL: Record<string, number> = {
 };
 const FLAT_KINDS = new Set(['cliff']);
 
-const definition = parseTiledWorld(plazaMap);
-const world = toLevelWorld(definition);
-const footprintBottom = new Map(
-  definition.footprints.map((f) => [f.id, f.rect.y + f.rect.h]),
-);
-
 /**
- * The town plaza, built from `maps/plaza.json` (a Tiled export): two elevation levels joined
+ * The town plaza, built from a loaded world (`lib/worldLoader`, passed in as scene data): two elevation levels joined
  * by stairs, buildings, a fountain, an arch to walk through, and one clickable NPC square.
  * - Movement: WASD or arrow keys, a virtual stick on touch devices, or click/tap to walk there.
  * - Press G to toggle the debug overlay (footprints, stairs, blocked cells, path, level).
@@ -63,6 +57,9 @@ const footprintBottom = new Map(
  *   and clicking the square emits `npc:proximity` on the channel.
  */
 export class PlazaScene extends Phaser.Scene {
+  private definition!: WorldDefinition;
+  private world!: LevelWorld;
+  private footprintBottom = new Map<string, number>();
   private player!: Player;
   private path: Vec2[] = [];
   private marker!: Phaser.GameObjects.Arc;
@@ -76,12 +73,20 @@ export class PlazaScene extends Phaser.Scene {
     super('plaza');
   }
 
+  init(data: { world: LoadedWorld }) {
+    this.definition = data.world.definition;
+    this.world = data.world.levels;
+    this.footprintBottom = new Map(
+      this.definition.footprints.map((f) => [f.id, f.rect.y + f.rect.h]),
+    );
+  }
+
   create() {
     this.drawGround();
 
     let npcPropId: string | null = null;
     let npcBox: Phaser.GameObjects.Rectangle | null = null;
-    for (const p of definition.props) {
+    for (const p of this.definition.props) {
       const { x, y, w, h } = p.rect;
       const box = this.add
         .rectangle(x + w / 2, y + h / 2, w, h, FILL[p.kind] ?? STONE)
@@ -92,7 +97,10 @@ export class PlazaScene extends Phaser.Scene {
         // Sort by the footprint's bottom edge, like the player's feet, so walking in front
         // of or behind an object works whatever its sprite looks like.
         box.setDepth(
-          entityDepth(p.level, footprintBottom.get(p.footprint ?? '') ?? y + h),
+          entityDepth(
+            p.level,
+            this.footprintBottom.get(p.footprint ?? '') ?? y + h,
+          ),
         );
       }
       if (p.npcId) {
@@ -100,7 +108,7 @@ export class PlazaScene extends Phaser.Scene {
         npcBox = box;
       }
     }
-    for (const o of definition.overhead) {
+    for (const o of this.definition.overhead) {
       const { x, y, w, h } = o.rect;
       this.add
         .rectangle(x + w / 2, y + h / 2, w, h, FILL[o.kind] ?? STONE)
@@ -125,7 +133,8 @@ export class PlazaScene extends Phaser.Scene {
     }
 
     const spawn =
-      definition.spawns.find((s) => s.id === 'player') ?? definition.spawns[0];
+      this.definition.spawns.find((s) => s.id === 'player') ??
+      this.definition.spawns[0];
     if (!spawn) throw new Error('The plaza map needs a "player" spawn');
     this.player = new Player(this, spawn.position, spawn.level);
     this.cameras.main.startFollow(this.player.body, true, 0.15, 0.15);
@@ -163,9 +172,9 @@ export class PlazaScene extends Phaser.Scene {
         over: Phaser.GameObjects.GameObject[],
       ) => {
         if (over.length > 0) return;
-        const grid = world.grids[0];
+        const grid = this.world.grids[0];
         const goalCell = worldToCell(grid, pointer.worldX, pointer.worldY);
-        const goalLevel = levelAtCell(world, goalCell, this.player.level);
+        const goalLevel = levelAtCell(this.world, goalCell, this.player.level);
         if (goalLevel === null) return;
         const startCell = worldToCell(
           grid,
@@ -173,7 +182,7 @@ export class PlazaScene extends Phaser.Scene {
           this.player.position.y,
         );
         const cells = findLevelPath(
-          world,
+          this.world,
           { ...startCell, level: this.player.level },
           { ...goalCell, level: goalLevel },
         );
@@ -204,7 +213,7 @@ export class PlazaScene extends Phaser.Scene {
 
   /** Level ground, bridge decks and the stair treads. Lower levels draw first. */
   private drawGround() {
-    for (const r of definition.regions) {
+    for (const r of this.definition.regions) {
       const { x, y, w, h } = r.rect;
       if (r.elevated) {
         this.drawDeck(r.level, r.rect);
@@ -215,7 +224,7 @@ export class PlazaScene extends Phaser.Scene {
         .setStrokeStyle(2, INK)
         .setDepth(GROUND_DEPTH + r.level);
     }
-    for (const s of definition.stairs) {
+    for (const s of this.definition.stairs) {
       const { x, y, w, h } = s.rect;
       this.add
         .rectangle(x + w / 2, y + h / 2, w, h, STAIRS)
@@ -272,7 +281,7 @@ export class PlazaScene extends Phaser.Scene {
     // Cap the step so a stalled frame (tab switch) cannot teleport the player through walls.
     const dt = Math.min(delta, 50) / 1000;
     const input = this.readInput();
-    const grid = world.grids[this.player.level];
+    const grid = this.world.grids[this.player.level];
 
     if (input.x !== 0 || input.y !== 0) {
       // Manual input cancels any tap-to-move in progress.
@@ -299,7 +308,7 @@ export class PlazaScene extends Phaser.Scene {
     }
     // Stairs change the level; everywhere else it stays as it was.
     this.player.setLevel(
-      resolveLevel(world.stairs, this.player.level, this.player.position),
+      resolveLevel(this.world.stairs, this.player.level, this.player.position),
     );
 
     if (this.debugOn) this.drawDebug();
@@ -319,7 +328,7 @@ export class PlazaScene extends Phaser.Scene {
   private drawDebug() {
     const g = this.debug;
     g.clear();
-    const grid = world.grids[this.player.level];
+    const grid = this.world.grids[this.player.level];
     const cell = grid.cellSize;
 
     // Cells the player's level blocks.
@@ -339,17 +348,17 @@ export class PlazaScene extends Phaser.Scene {
 
     // Footprints (the collision boxes) and stair zones, on every level.
     g.lineStyle(1, DEBUG, 1);
-    for (const f of definition.footprints) {
+    for (const f of this.definition.footprints) {
       g.strokeRect(f.rect.x, f.rect.y, f.rect.w, f.rect.h);
     }
     g.lineStyle(2, DEBUG_REGION, 1);
-    for (const r of definition.regions) {
+    for (const r of this.definition.regions) {
       if (r.level === this.player.level) {
         g.strokeRect(r.rect.x, r.rect.y, r.rect.w, r.rect.h);
       }
     }
     g.lineStyle(2, 0x2e7d32, 1);
-    for (const s of definition.stairs) {
+    for (const s of this.definition.stairs) {
       g.strokeRect(s.rect.x, s.rect.y, s.rect.w, s.rect.h);
     }
 

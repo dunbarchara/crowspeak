@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import plazaMap from '../world/maps/plaza.json';
+import plazaMap from '../../public/worlds/plaza@1/map.json';
 import { cellToWorld, isFootprintWalkable, worldToCell } from './grid';
 import { rectContains } from './geometry';
 import { levelAtCell, resolveLevel } from './levels';
 import { findLevelPath } from './pathfinding';
-import { type TiledMap, parseTiledWorld, toLevelWorld } from './world';
+import {
+  type TiledMap,
+  parseTiledWorld,
+  toLevelWorld,
+  validateWorld,
+} from './world';
 
 const def = parseTiledWorld(plazaMap);
 const world = toLevelWorld(def);
@@ -219,5 +224,87 @@ describe('the bridge and the L-shaped upper level', () => {
     const wall = cellAt(1264, 500);
     expect(world.grids[0].walkable[wall.row * def.cols + wall.col]).toBe(false);
     expect(world.grids[1].walkable[wall.row * def.cols + wall.col]).toBe(false);
+  });
+});
+
+describe('NPC anchors', () => {
+  it('reads them from the npc-anchors layer by npc_id', () => {
+    expect(def.npcAnchors).toEqual([
+      { npcId: 'npc-demo', level: 0, position: { x: 400, y: 592 } },
+    ]);
+  });
+
+  const withAnchors = (objects: unknown[]) =>
+    ({
+      ...plazaMap,
+      layers: plazaMap.layers.map((l) =>
+        l.name === 'npc-anchors' ? { ...l, objects } : l,
+      ),
+    }) as unknown as TiledMap;
+  const anchor = (name: string | undefined, x = 400, y = 592, level = 0) => ({
+    id: 99,
+    ...(name ? { name } : {}),
+    x,
+    y,
+    point: true,
+    properties: [{ name: 'level', type: 'int', value: level }],
+  });
+
+  it('rejects unnamed and duplicate anchors', () => {
+    expect(() => parseTiledWorld(withAnchors([anchor(undefined)]))).toThrow(
+      /npc_id/,
+    );
+    expect(() =>
+      parseTiledWorld(withAnchors([anchor('a'), anchor('a')])),
+    ).toThrow(/Duplicate/);
+  });
+
+  it('validates that anchors sit inside a region of their level', () => {
+    const outside = parseTiledWorld(withAnchors([anchor('far', 5000, 5000)]));
+    expect(() => validateWorld(outside, toLevelWorld(outside))).toThrow(
+      /outside every region/,
+    );
+    const wrongLevel = parseTiledWorld(
+      withAnchors([anchor('up', 400, 592, 1)]),
+    );
+    expect(() => validateWorld(wrongLevel, toLevelWorld(wrongLevel))).toThrow(
+      /level 1/,
+    );
+    expect(() => validateWorld(def, world)).not.toThrow();
+  });
+
+  it('rejects a player spawn on blocked ground', () => {
+    const blocked = {
+      ...def,
+      spawns: [{ id: 'player', level: 0, position: { x: 400, y: 560 } }], // inside the NPC
+    };
+    expect(() => validateWorld(blocked, world)).toThrow(/walkable/);
+  });
+});
+
+describe('reserved and malformed input', () => {
+  it('rejects the reserved prefab property until prefabs exist', () => {
+    const layers = plazaMap.layers.map((l) =>
+      l.name === 'props'
+        ? {
+            ...l,
+            objects: [
+              {
+                ...l.objects[0],
+                properties: [
+                  ...(l.objects[0].properties ?? []),
+                  { name: 'prefab', type: 'string', value: 'building-small' },
+                ],
+              },
+            ],
+          }
+        : l,
+    );
+    expect(() => parseTiledWorld({ ...plazaMap, layers })).toThrow(/prefabs/);
+  });
+
+  it('rejects something that is not a Tiled map', () => {
+    expect(() => parseTiledWorld({ layers: 'nope' })).toThrow(/Tiled/);
+    expect(() => parseTiledWorld(null)).toThrow(/Tiled/);
   });
 });

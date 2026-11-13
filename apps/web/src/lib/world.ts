@@ -1,4 +1,5 @@
-import type { Rect, Vec2 } from './geometry';
+import { type Rect, type Vec2, rectContains } from './geometry';
+import { isCellWalkable, worldToCell } from './grid';
 import {
   type FootprintObject,
   type LevelWorld,
@@ -60,6 +61,13 @@ export interface Overhead {
   rect: Rect;
 }
 
+/** Where an engine `npc_id` stands. `position` is the point between the NPC's feet. */
+export interface NpcAnchor {
+  npcId: string;
+  level: number;
+  position: Vec2;
+}
+
 export interface Spawn {
   id: string;
   level: number;
@@ -77,15 +85,33 @@ export interface WorldDefinition {
   props: Prop[];
   overhead: Overhead[];
   spawns: Spawn[];
+  npcAnchors: NpcAnchor[];
 }
 
 const EDGES: Edge[] = ['n', 's', 'e', 'w'];
 
+function asTiledMap(value: unknown): TiledMap {
+  const map = value as Partial<Record<keyof TiledMap, unknown>> | null;
+  const numbers = ['width', 'height', 'tilewidth', 'tileheight'] as const;
+  if (
+    typeof map !== 'object' ||
+    map === null ||
+    !Array.isArray(map.layers) ||
+    numbers.some((key) => typeof map[key] !== 'number')
+  ) {
+    throw new Error('Not a Tiled JSON map');
+  }
+  return map as TiledMap;
+}
+
 /**
  * Read a Tiled JSON export. Layers (all object layers): `regions`, `footprints`, `stairs`,
- * `props`, `overhead` and `spawns`. Throws a descriptive error on anything missing or odd.
+ * `props`, `overhead`, `spawns` and `npc-anchors`. Throws a descriptive error on anything
+ * missing or odd. The `prefab` property is reserved for reusable buildings and rejected
+ * until they are supported, rather than silently ignored.
  */
-export function parseTiledWorld(map: TiledMap): WorldDefinition {
+export function parseTiledWorld(input: unknown): WorldDefinition {
+  const map = asTiledMap(input);
   if (map.tilewidth !== map.tileheight) {
     throw new Error('Map tiles must be square');
   }
@@ -97,6 +123,15 @@ export function parseTiledWorld(map: TiledMap): WorldDefinition {
     return found.objects ?? [];
   };
   const idOf = (layer: string, o: TiledObject) => o.name || `${layer}-${o.id}`;
+  for (const layer of map.layers) {
+    for (const o of layer.objects ?? []) {
+      if (o.properties?.some((p) => p.name === 'prefab')) {
+        throw new Error(
+          `${layer.name} object ${idOf(layer.name, o)}: prefabs are not supported yet`,
+        );
+      }
+    }
+  }
   const rectOf = (layer: string, o: TiledObject): Rect => {
     if (!o.width || !o.height) {
       throw new Error(`${layer} object ${idOf(layer, o)} needs a size`);
@@ -182,6 +217,20 @@ export function parseTiledWorld(map: TiledMap): WorldDefinition {
     position: { x: o.x, y: o.y },
   }));
 
+  const npcAnchors = objects('npc-anchors').map((o): NpcAnchor => {
+    if (!o.name) throw new Error('npc-anchors objects must be named by npc_id');
+    return {
+      npcId: o.name,
+      level: num('npc-anchors', o, 'level'),
+      position: { x: o.x, y: o.y },
+    };
+  });
+  const seen = new Set<string>();
+  for (const a of npcAnchors) {
+    if (seen.has(a.npcId)) throw new Error(`Duplicate NPC anchor ${a.npcId}`);
+    seen.add(a.npcId);
+  }
+
   return {
     cols: map.width,
     rows: map.height,
@@ -192,6 +241,7 @@ export function parseTiledWorld(map: TiledMap): WorldDefinition {
     props,
     overhead,
     spawns,
+    npcAnchors,
   };
 }
 
@@ -206,4 +256,32 @@ export function toLevelWorld(def: WorldDefinition): LevelWorld {
     def.footprints,
     def.stairs,
   );
+}
+
+/**
+ * Check that a parsed world makes sense once its grids exist: the player spawn must stand
+ * on walkable ground, and every NPC anchor must lie inside a region of its level. (An NPC's
+ * own footprint blocks the cells around it, so anchors are not required to be walkable.)
+ */
+export function validateWorld(def: WorldDefinition, levels: LevelWorld): void {
+  for (const spawn of def.spawns) {
+    const grid = levels.grids[spawn.level];
+    if (!grid) throw new Error(`Spawn ${spawn.id}: no level ${spawn.level}`);
+    const cell = worldToCell(grid, spawn.position.x, spawn.position.y);
+    if (!isCellWalkable(grid, cell.col, cell.row)) {
+      throw new Error(
+        `Spawn ${spawn.id} is not on walkable ground on level ${spawn.level}`,
+      );
+    }
+  }
+  for (const anchor of def.npcAnchors) {
+    const inside = def.regions.some(
+      (r) => r.level === anchor.level && rectContains(r.rect, anchor.position),
+    );
+    if (!inside) {
+      throw new Error(
+        `NPC anchor ${anchor.npcId} is outside every region of level ${anchor.level}`,
+      );
+    }
+  }
 }

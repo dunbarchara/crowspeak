@@ -53,3 +53,16 @@ body {
   background: #222;
   opacity: 0.6;
 }
+
+.world-status {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 24px;
+  color: #222;
+  background: #f4f1ea;
+  font-family: system-ui, sans-serif;
+  text-align: center;
+}
