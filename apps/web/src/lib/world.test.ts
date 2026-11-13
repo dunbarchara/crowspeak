@@ -227,27 +227,85 @@ describe('the bridge and the L-shaped upper level', () => {
   });
 });
 
+const withAnchors = (objects: unknown[]) =>
+  ({
+    ...plazaMap,
+    layers: plazaMap.layers.map((l) =>
+      l.name === 'npc-anchors' ? { ...l, objects } : l,
+    ),
+  }) as unknown as TiledMap;
+const anchor = (
+  name: string | undefined,
+  x = 400,
+  y = 592,
+  level = 0,
+  group?: string,
+) => ({
+  id: 99,
+  ...(name ? { name } : {}),
+  x,
+  y,
+  point: true,
+  properties: [
+    { name: 'level', type: 'int', value: level },
+    ...(group ? [{ name: 'group', type: 'string', value: group }] : []),
+  ],
+});
+
 describe('NPC anchors', () => {
   it('reads them from the npc-anchors layer by npc_id', () => {
-    expect(def.npcAnchors).toEqual([
-      { npcId: 'npc-demo', level: 0, position: { x: 400, y: 592 } },
+    const byId = Object.fromEntries(def.npcAnchors.map((a) => [a.npcId, a]));
+    expect(Object.keys(byId).sort()).toEqual([
+      'alfonso',
+      'maria',
+      'npc-demo',
+      'poncho',
+      'rosa',
     ]);
+    expect(byId['npc-demo']).toEqual({
+      npcId: 'npc-demo',
+      level: 0,
+      position: { x: 400, y: 592 },
+      groupId: null,
+    });
   });
 
-  const withAnchors = (objects: unknown[]) =>
-    ({
-      ...plazaMap,
-      layers: plazaMap.layers.map((l) =>
-        l.name === 'npc-anchors' ? { ...l, objects } : l,
-      ),
-    }) as unknown as TiledMap;
-  const anchor = (name: string | undefined, x = 400, y = 592, level = 0) => ({
-    id: 99,
-    ...(name ? { name } : {}),
-    x,
-    y,
-    point: true,
-    properties: [{ name: 'level', type: 'int', value: level }],
+  it('reads predefined groups from the group property', () => {
+    const group = def.npcAnchors.filter((a) => a.groupId === 'fountain-chat');
+    expect(group.map((a) => a.npcId).sort()).toEqual(['maria', 'poncho']);
+    expect(def.npcAnchors.filter((a) => a.groupId === null)).toHaveLength(3);
+  });
+
+  it('keeps NPCs out of the static grids: they never block anything', () => {
+    // No footprint or prop is an NPC; the cell under an NPC is walkable in the grid.
+    expect(def.footprints.some((f) => f.id.startsWith('npc'))).toBe(false);
+    const a = def.npcAnchors.find((n) => n.npcId === 'npc-demo')!;
+    const cell = worldToCell(world.grids[a.level], a.position.x, a.position.y);
+    expect(world.grids[a.level].walkable[cell.row * def.cols + cell.col]).toBe(
+      true,
+    );
+  });
+
+  it('puts the bridge NPC on the bridge deck, a level-1 region', () => {
+    const alfonso = def.npcAnchors.find((n) => n.npcId === 'alfonso')!;
+    const bridge = def.regions.find((r) => r.id === 'bridge')!;
+    expect(alfonso.level).toBe(bridge.level);
+    expect(rectContains(bridge.rect, alfonso.position)).toBe(true);
+  });
+
+  it('rejects groups of one and non-text group names', () => {
+    const lonely = withAnchors([anchor('a', 400, 592, 0, 'solo')]);
+    expect(() => parseTiledWorld(lonely)).toThrow(/at least two/);
+    const bad = withAnchors([
+      {
+        ...anchor('a'),
+        properties: [
+          { name: 'level', type: 'int', value: 0 },
+          { name: 'group', type: 'int', value: 3 },
+        ],
+      },
+    ]);
+    expect(() => parseTiledWorld(bad)).toThrow(/"group"/);
   });
 
   it('rejects unnamed and duplicate anchors', () => {
@@ -276,7 +334,7 @@ describe('NPC anchors', () => {
   it('rejects a player spawn on blocked ground', () => {
     const blocked = {
       ...def,
-      spawns: [{ id: 'player', level: 0, position: { x: 400, y: 560 } }], // inside the NPC
+      spawns: [{ id: 'player', level: 0, position: { x: 640, y: 590 } }], // inside the fountain footprint
     };
     expect(() => validateWorld(blocked, world)).toThrow(/walkable/);
   });

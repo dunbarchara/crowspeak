@@ -88,8 +88,12 @@ describe('loadWorld', () => {
   it('loads, parses and validates the plaza', async () => {
     const loaded = await loadWorld(plaza(), 'plaza@1');
     expect(formatWorldRef(loaded.ref)).toBe('plaza@1');
-    expect(loaded.definition.npcAnchors.map((a) => a.npcId)).toEqual([
+    expect(loaded.definition.npcAnchors.map((a) => a.npcId).sort()).toEqual([
+      'alfonso',
+      'maria',
       'npc-demo',
+      'poncho',
+      'rosa',
     ]);
     expect(loaded.levels.grids).toHaveLength(2);
   });

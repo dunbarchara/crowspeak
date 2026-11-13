@@ -182,18 +182,6 @@
           "properties": [{ "name": "level", "type": "int", "value": 0 }]
         },
         {
-          "id": 10,
-          "name": "npc-demo",
-          "type": "",
-          "x": 368,
-          "y": 528,
-          "width": 64,
-          "height": 64,
-          "rotation": 0,
-          "visible": true,
-          "properties": [{ "name": "level", "type": "int", "value": 0 }]
-        },
-        {
           "id": 27,
           "name": "tower-south",
           "type": "",
@@ -400,23 +388,6 @@
           ]
         },
         {
-          "id": 21,
-          "name": "npc-demo",
-          "type": "",
-          "x": 368,
-          "y": 528,
-          "width": 64,
-          "height": 64,
-          "rotation": 0,
-          "visible": true,
-          "properties": [
-            { "name": "kind", "type": "string", "value": "npc" },
-            { "name": "level", "type": "int", "value": 0 },
-            { "name": "footprint", "type": "string", "value": "npc-demo" },
-            { "name": "npc", "type": "string", "value": "npc-demo" }
-          ]
-        },
-        {
           "id": 29,
           "name": "cliff-south",
           "type": "",
@@ -554,10 +525,68 @@
           "rotation": 0,
           "visible": true,
           "properties": [{ "name": "level", "type": "int", "value": 0 }]
+        },
+        {
+          "id": 34,
+          "name": "poncho",
+          "type": "",
+          "x": 600,
+          "y": 650,
+          "width": 0,
+          "height": 0,
+          "point": true,
+          "rotation": 0,
+          "visible": true,
+          "properties": [
+            { "name": "level", "type": "int", "value": 0 },
+            { "name": "group", "type": "string", "value": "fountain-chat" }
+          ]
+        },
+        {
+          "id": 35,
+          "name": "maria",
+          "type": "",
+          "x": 680,
+          "y": 650,
+          "width": 0,
+          "height": 0,
+          "point": true,
+          "rotation": 0,
+          "visible": true,
+          "properties": [
+            { "name": "level", "type": "int", "value": 0 },
+            { "name": "group", "type": "string", "value": "fountain-chat" }
+          ]
+        },
+        {
+          "id": 36,
+          "name": "rosa",
+          "type": "",
+          "x": 800,
+          "y": 160,
+          "width": 0,
+          "height": 0,
+          "point": true,
+          "rotation": 0,
+          "visible": true,
+          "properties": [{ "name": "level", "type": "int", "value": 1 }]
+        },
+        {
+          "id": 37,
+          "name": "alfonso",
+          "type": "",
+          "x": 480,
+          "y": 560,
+          "width": 0,
+          "height": 0,
+          "point": true,
+          "rotation": 0,
+          "visible": true,
+          "properties": [{ "name": "level", "type": "int", "value": 1 }]
         }
       ]
     }
   ],
   "nextlayerid": 8,
-  "nextobjectid": 34
+  "nextobjectid": 38
 }

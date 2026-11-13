@@ -14,10 +14,17 @@ import {
   moveWithCollision,
 } from '../lib/movement';
 import { findLevelPath } from '../lib/pathfinding';
+import {
+  type ConversationTarget,
+  ENTER_RADIUS,
+  EXIT_RADIUS,
+  pickTarget,
+  sameTarget,
+} from '../lib/proximity';
 import type { WorldDefinition } from '../lib/world';
 import type { LoadedWorld } from '../lib/worldLoader';
 import { appEvents } from '../store/channel';
-import { useGameStore } from '../store/useGameStore';
+import { Npc } from './Npc';
 import { PLAYER_FOOTPRINT, Player } from './Player';
 import { virtualStick } from './virtualStick';
 
@@ -27,7 +34,6 @@ const TERRACE = 0xe6e2d6;
 const STONE = 0xcfcabd;
 const CLIFF = 0x9d978a;
 const STAIRS = 0xd9d4c7;
-const HIGHLIGHT = 0xe5a50a;
 const DEBUG = 0xd23b3b;
 
 const SPEED = 160; // world pixels per second
@@ -44,23 +50,27 @@ const FILL: Record<string, number> = {
   'arch-top': STONE,
   cliff: CLIFF,
   fountain: PAPER,
-  npc: PAPER,
 };
 const FLAT_KINDS = new Set(['cliff']);
 
 /**
- * The town plaza, built from a loaded world (`lib/worldLoader`, passed in as scene data): two elevation levels joined
- * by stairs, buildings, a fountain, an arch to walk through, and one clickable NPC square.
+ * The town plaza, built from a loaded world (`lib/worldLoader`, passed in as scene data): two
+ * elevation levels joined by stairs, a bridge, buildings, a fountain, an arch to walk through,
+ * and NPCs standing at the world's anchors.
  * - Movement: WASD or arrow keys, a virtual stick on touch devices, or click/tap to walk there.
- * - Press G to toggle the debug overlay (footprints, stairs, blocked cells, path, level).
- * - Store wiring: the label follows `voiceEnabled`, the NPC square follows `npcsInRange`,
- *   and clicking the square emits `npc:proximity` on the channel.
+ *   NPCs have no collision with the learner: they can walk through each other.
+ * - Proximity: every frame the nearest NPC in range on the player's level is the conversation
+ *   target; if it belongs to a predefined group, the whole group is. Targets get a highlighted
+ *   shadow and are published as `target:changed` on the channel.
+ * - Press G to toggle the debug overlay (footprints, stairs, blocked cells, path, level, ranges).
  */
 export class PlazaScene extends Phaser.Scene {
   private definition!: WorldDefinition;
   private world!: LevelWorld;
   private footprintBottom = new Map<string, number>();
   private player!: Player;
+  private npcs: Npc[] = [];
+  private target: ConversationTarget | null = null;
   private path: Vec2[] = [];
   private marker!: Phaser.GameObjects.Arc;
   private debug!: Phaser.GameObjects.Graphics;
@@ -84,8 +94,6 @@ export class PlazaScene extends Phaser.Scene {
   create() {
     this.drawGround();
 
-    let npcPropId: string | null = null;
-    let npcBox: Phaser.GameObjects.Rectangle | null = null;
     for (const p of this.definition.props) {
       const { x, y, w, h } = p.rect;
       const box = this.add
@@ -103,10 +111,6 @@ export class PlazaScene extends Phaser.Scene {
           ),
         );
       }
-      if (p.npcId) {
-        npcPropId = p.npcId;
-        npcBox = box;
-      }
     }
     for (const o of this.definition.overhead) {
       const { x, y, w, h } = o.rect;
@@ -116,21 +120,7 @@ export class PlazaScene extends Phaser.Scene {
         .setDepth(overheadDepth(o.level));
     }
 
-    const label = this.add
-      .text(0, 0, '', { color: '#222222', fontSize: '16px' })
-      .setOrigin(0.5)
-      .setDepth(overheadDepth(0));
-    if (npcBox && npcPropId) {
-      const id = npcPropId;
-      const box = npcBox;
-      box.setInteractive({ useHandCursor: true });
-      label.setPosition(box.x, box.y + box.height / 2 + 14);
-      let inRange = false;
-      box.on('pointerdown', () => {
-        inRange = !inRange;
-        appEvents.emit('npc:proximity', { npcId: id, inRange });
-      });
-    }
+    this.npcs = this.definition.npcAnchors.map((a) => new Npc(this, a));
 
     const spawn =
       this.definition.spawns.find((s) => s.id === 'player') ??
@@ -164,7 +154,7 @@ export class PlazaScene extends Phaser.Scene {
       if (!this.debugOn) this.debug.clear();
     });
 
-    // Click or tap to walk. Presses on interactive objects (the NPC) are not movement.
+    // Click or tap to walk. Presses on interactive objects are not movement.
     this.input.on(
       'pointerdown',
       (
@@ -193,20 +183,9 @@ export class PlazaScene extends Phaser.Scene {
       },
     );
 
-    const render = (state: ReturnType<typeof useGameStore.getState>) => {
-      npcBox?.setFillStyle(
-        npcPropId && state.npcsInRange.includes(npcPropId) ? HIGHLIGHT : PAPER,
-      );
-      label.setText(
-        `voice: ${state.voiceEnabled ? 'on' : 'off'} (click the square)`,
-      );
-    };
-    render(useGameStore.getState());
-    const unsubscribe = useGameStore.subscribe(render);
-
-    // `game.destroy()` emits DESTROY, not SHUTDOWN, so listen for both. A leaked store
-    // subscription from a destroyed scene throws on its dead objects and breaks live scenes.
-    const cleanup = () => unsubscribe();
+    // `game.destroy()` emits DESTROY, not SHUTDOWN, so listen for both. A scene that goes
+    // away must not leave its last target in the store.
+    const cleanup = () => appEvents.emit('target:changed', { target: null });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanup);
     this.events.once(Phaser.Scenes.Events.DESTROY, cleanup);
   }
@@ -311,7 +290,19 @@ export class PlazaScene extends Phaser.Scene {
       resolveLevel(this.world.stairs, this.player.level, this.player.position),
     );
 
+    this.updateTarget();
     if (this.debugOn) this.drawDebug();
+  }
+
+  /** Recompute who the learner would talk to; on a change, highlight them and tell the app. */
+  private updateTarget() {
+    const next = pickTarget(this.player, this.npcs, this.target);
+    if (sameTarget(next, this.target)) return;
+    this.target = next;
+    for (const npc of this.npcs) {
+      npc.setHighlighted(next?.npcIds.includes(npc.npcId) ?? false);
+    }
+    appEvents.emit('target:changed', { target: next });
   }
 
   private readInput(): Vec2 {
@@ -369,6 +360,15 @@ export class PlazaScene extends Phaser.Scene {
       from = point;
     }
 
+    // The enter and exit radii around the NPCs on the player's level.
+    for (const npc of this.npcs) {
+      if (npc.level !== this.player.level) continue;
+      g.lineStyle(1, 0xe5a50a, 1);
+      g.strokeCircle(npc.position.x, npc.position.y, ENTER_RADIUS);
+      g.lineStyle(1, 0xe5a50a, 0.4);
+      g.strokeCircle(npc.position.x, npc.position.y, EXIT_RADIUS);
+    }
+
     const { x, y } = this.player.position;
     g.lineStyle(1, DEBUG, 1);
     g.strokeRect(
@@ -378,7 +378,9 @@ export class PlazaScene extends Phaser.Scene {
       PLAYER_FOOTPRINT.halfH * 2,
     );
     this.debugText.setText(
-      `level ${this.player.level}  (${Math.round(x)}, ${Math.round(y)})`,
+      `level ${this.player.level}  (${Math.round(x)}, ${Math.round(y)})  target: ${
+        this.target ? this.target.npcIds.join('+') : 'none'
+      }`,
     );
   }
 }

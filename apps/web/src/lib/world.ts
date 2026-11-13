@@ -51,7 +51,6 @@ export interface Prop {
   level: number;
   rect: Rect;
   footprint?: string;
-  npcId?: string;
 }
 
 export interface Overhead {
@@ -61,11 +60,15 @@ export interface Overhead {
   rect: Rect;
 }
 
-/** Where an engine `npc_id` stands. `position` is the point between the NPC's feet. */
+/**
+ * Where an engine `npc_id` stands. `position` is the point between the NPC's feet.
+ * NPCs that share a `groupId` are a predefined group: approaching any member is approaching all.
+ */
 export interface NpcAnchor {
   npcId: string;
   level: number;
   position: Vec2;
+  groupId: string | null;
 }
 
 export interface Spawn {
@@ -190,14 +193,12 @@ export function parseTiledWorld(input: unknown): WorldDefinition {
   });
   const props = objects('props').map((o): Prop => {
     const footprint = optional(o, 'footprint');
-    const npcId = optional(o, 'npc');
     return {
       id: idOf('props', o),
       kind: str('props', o, 'kind'),
       level: num('props', o, 'level'),
       rect: rectOf('props', o),
       ...(typeof footprint === 'string' ? { footprint } : {}),
-      ...(typeof npcId === 'string' ? { npcId } : {}),
     };
   });
   for (const p of props) {
@@ -219,16 +220,30 @@ export function parseTiledWorld(input: unknown): WorldDefinition {
 
   const npcAnchors = objects('npc-anchors').map((o): NpcAnchor => {
     if (!o.name) throw new Error('npc-anchors objects must be named by npc_id');
+    const group = optional(o, 'group');
+    if (group !== undefined && (typeof group !== 'string' || !group)) {
+      throw new Error(`npc-anchors object ${o.name}: "group" must be text`);
+    }
     return {
       npcId: o.name,
       level: num('npc-anchors', o, 'level'),
       position: { x: o.x, y: o.y },
+      groupId: group ?? null,
     };
   });
   const seen = new Set<string>();
   for (const a of npcAnchors) {
     if (seen.has(a.npcId)) throw new Error(`Duplicate NPC anchor ${a.npcId}`);
     seen.add(a.npcId);
+  }
+  const groupSizes = new Map<string, number>();
+  for (const a of npcAnchors) {
+    if (a.groupId)
+      groupSizes.set(a.groupId, (groupSizes.get(a.groupId) ?? 0) + 1);
+  }
+  for (const [groupId, size] of groupSizes) {
+    if (size < 2)
+      throw new Error(`NPC group ${groupId} needs at least two members`);
   }
 
   return {

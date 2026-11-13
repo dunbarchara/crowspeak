@@ -17,6 +17,20 @@ export interface WalkGrid {
   walkable: boolean[];
 }
 
+/** The inclusive range of cells (possibly outside the grid) that a rectangle touches. */
+export function cellRange(
+  origin: Vec2,
+  cellSize: number,
+  rect: Rect,
+): { c0: number; c1: number; r0: number; r1: number } {
+  return {
+    c0: Math.floor((rect.x - origin.x) / cellSize),
+    c1: Math.ceil((rect.x + rect.w - origin.x) / cellSize) - 1,
+    r0: Math.floor((rect.y - origin.y) / cellSize),
+    r1: Math.ceil((rect.y + rect.h - origin.y) / cellSize) - 1,
+  };
+}
+
 /** Build a grid where every cell touching one of the blocked rectangles is not walkable. */
 export function buildGrid(
   cols: number,
@@ -27,10 +41,7 @@ export function buildGrid(
 ): WalkGrid {
   const walkable = new Array<boolean>(cols * rows).fill(true);
   for (const rect of blocked) {
-    const c0 = Math.floor((rect.x - origin.x) / cellSize);
-    const c1 = Math.ceil((rect.x + rect.w - origin.x) / cellSize) - 1;
-    const r0 = Math.floor((rect.y - origin.y) / cellSize);
-    const r1 = Math.ceil((rect.y + rect.h - origin.y) / cellSize) - 1;
+    const { c0, c1, r0, r1 } = cellRange(origin, cellSize, rect);
     for (let row = Math.max(r0, 0); row <= Math.min(r1, rows - 1); row++) {
       for (let col = Math.max(c0, 0); col <= Math.min(c1, cols - 1); col++) {
         walkable[row * cols + col] = false;
