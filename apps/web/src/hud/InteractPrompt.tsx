@@ -1,3 +1,5 @@
+import { engineClient } from '../engine';
+import { npcName } from '../lib/chatTitle';
 import { useGameStore } from '../store/useGameStore';
 
 /** Shown when someone is in range and no conversation is open. Also the way in on touch devices. */
@@ -8,7 +10,8 @@ export function InteractPrompt() {
   if (!target || conversation) return null;
   return (
     <button type="button" className="prompt" onClick={startConversation}>
-      <kbd>E</kbd> Talk to {target.npcIds.join(', ')}
+      <kbd>E</kbd> Talk to{' '}
+      {target.npcIds.map((id) => npcName(engineClient.npcs, id)).join(', ')}
     </button>
   );
 }

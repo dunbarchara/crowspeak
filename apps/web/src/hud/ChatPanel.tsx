@@ -1,22 +1,25 @@
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { engineClient } from '../engine';
-import type { ChatEntry } from '../lib/chat';
+import { conversationTitle, npcName } from '../lib/chatTitle';
+import type { ChatEntry, ChatMessage } from '../lib/chat';
 import type { ConversationTarget } from '../lib/proximity';
 import { NO_INSET, insetFromPanel } from '../lib/viewInset';
 import { useGameStore } from '../store/useGameStore';
-import { CorrectionView, MarkedText } from './CorrectionView';
+import { CorrectionsWindow, MarkedText } from './CorrectionView';
+import { readPx } from './cssVars';
+import { WindowHeader } from './WindowHeader';
 
-function noticeText(entry: Extract<ChatEntry, { kind: 'notice' }>): string {
-  if (entry.tone === 'error') return `Something went wrong: ${entry.detail}`;
-  return entry.detail === 'not_addressed'
-    ? `${entry.speakerId} was not addressed and stayed quiet.`
-    : `${entry.speakerId} stayed quiet.`;
-}
+const YOU = 'You';
 
 /** The chat. Hidden until the learner starts a conversation, then docked at the side. */
 export function ChatPanel() {
   const conversation = useGameStore((state) => state.conversation);
   return conversation ? <OpenChat conversation={conversation} /> : null;
+}
+
+/** A learner message the engine had something to say about, so it can open the details. */
+function hasFixes(message: ChatMessage): boolean {
+  return message.corrections !== null && !message.corrections.isCorrect;
 }
 
 function OpenChat({ conversation }: { conversation: ConversationTarget }) {
@@ -26,20 +29,30 @@ function OpenChat({ conversation }: { conversation: ConversationTarget }) {
   const endConversation = useGameStore((state) => state.endConversation);
   const connected = chat.connection === 'connected';
   const [text, setText] = useState('');
-  const panel = useRef<HTMLElement>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const stack = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLOListElement>(null);
   const input = useRef<HTMLInputElement>(null);
+  const names = engineClient.npcs;
 
-  // Tell the world how much screen the panel covers, so it can center the player in the rest.
+  // Tell the world how much screen the chat (and the corrections beside it) covers, so it can
+  // center the player in the rest.
   useEffect(() => {
-    const element = panel.current!;
-    const report = () =>
+    const element = stack.current!;
+    const report = () => {
+      // The opaque margin and the fade beside the panel are set in the CSS (`--chat-margin`,
+      // `--chat-fade`); the world treats that strip as covered too.
+      const edge =
+        readPx(element, '--chat-margin', 16) +
+        readPx(element, '--chat-fade', 16);
       setViewInset(
-        insetFromPanel(element.getBoundingClientRect(), {
-          width: window.innerWidth,
-          height: window.innerHeight,
-        }),
+        insetFromPanel(
+          element.getBoundingClientRect(),
+          { width: window.innerWidth, height: window.innerHeight },
+          edge,
+        ),
       );
+    };
     report();
     const observer = new ResizeObserver(report);
     observer.observe(element);
@@ -70,7 +83,11 @@ function OpenChat({ conversation }: { conversation: ConversationTarget }) {
 
   const typing = Object.entries(chat.bubbles)
     .filter(([, bubble]) => bubble.typing)
-    .map(([speakerId]) => speakerId);
+    .map(([speakerId]) => npcName(names, speakerId));
+
+  const selected = chat.entries.find(
+    (e): e is ChatMessage => e.kind === 'message' && e.id === selectedId,
+  );
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -80,81 +97,115 @@ function OpenChat({ conversation }: { conversation: ConversationTarget }) {
     setText('');
   };
 
+  const noticeText = (entry: Extract<ChatEntry, { kind: 'notice' }>) => {
+    if (entry.tone === 'error') return `Something went wrong: ${entry.detail}`;
+    const who = npcName(names, entry.speakerId);
+    return entry.detail === 'not_addressed'
+      ? `${who} was not addressed and stayed quiet.`
+      : `${who} stayed quiet.`;
+  };
+
   return (
-    <section ref={panel} className="chat" aria-label="Chat">
-      <header className="chat-head">
-        <span className="chat-title">
-          {conversation.npcIds.join(', ')}
-          {conversation.groupId ? ' (group)' : ''}
-        </span>
-        <button type="button" onClick={endConversation}>
-          Close
-        </button>
-      </header>
-      <ol ref={list} className="transcript" aria-live="polite">
-        {chat.entries.length === 0 && (
-          <li className="notice">No messages yet.</li>
-        )}
-        {chat.entries.map((entry) =>
-          entry.kind === 'notice' ? (
-            <li key={entry.id} className="notice" data-tone={entry.tone}>
-              {noticeText(entry)}
-            </li>
-          ) : (
-            <li key={entry.id} className="msg" data-role={entry.role}>
-              {entry.role === 'assistant' && (
-                <span className="msg-who">
-                  {entry.speakerId}
-                  {entry.expression && (
-                    <span className="msg-expression">{entry.expression}</span>
-                  )}
-                </span>
-              )}
-              <span className="msg-text">
-                {entry.role === 'user' ? (
-                  <MarkedText
-                    text={entry.text}
-                    corrections={entry.corrections}
-                  />
-                ) : (
-                  entry.text
-                )}
-                {entry.streaming && <span className="caret" />}
-                {entry.interrupted && ' …'}
-              </span>
-              {entry.corrections && (
-                <CorrectionView corrections={entry.corrections} />
-              )}
-            </li>
-          ),
-        )}
-      </ol>
-      {typing.length > 0 && (
-        <p className="typing">{typing.join(', ')} typing…</p>
-      )}
-      <form className="chat-form" onSubmit={submit}>
-        <input
-          ref={input}
-          type="text"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onFocus={() => setChatFocused(true)}
-          onBlur={() => setChatFocused(false)}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') endConversation();
-          }}
-          disabled={!connected}
-          placeholder={
-            connected ? 'Escribe un mensaje…' : 'Waiting for the connection…'
-          }
-          aria-label="Message"
-          autoComplete="off"
-          enterKeyHint="send"
+    <div ref={stack} className="chat-stack">
+      <section className="window chat" aria-label="Chat">
+        <WindowHeader
+          title={conversationTitle(
+            names,
+            conversation.npcIds,
+            conversation.groupId !== null,
+          )}
+          closeLabel="Close chat"
+          onClose={endConversation}
         />
-        <button type="submit" disabled={!connected || !text.trim()}>
-          Send
-        </button>
-      </form>
-    </section>
+        <ol ref={list} className="transcript" aria-live="polite">
+          {chat.entries.length === 0 && (
+            <li className="notice">No messages yet.</li>
+          )}
+          {chat.entries.map((entry) =>
+            entry.kind === 'notice' ? (
+              <li key={entry.id} className="notice" data-tone={entry.tone}>
+                {noticeText(entry)}
+              </li>
+            ) : (
+              <li key={entry.id} className="msg" data-role={entry.role}>
+                <div className="msg-who">
+                  <span className="msg-name">
+                    {entry.role === 'user'
+                      ? YOU
+                      : npcName(names, entry.speakerId)}
+                  </span>
+                  {entry.expression && (
+                    <span className="msg-meta">{entry.expression}</span>
+                  )}
+                  {entry.corrections?.isCorrect && (
+                    <span
+                      className="msg-ok"
+                      title={entry.corrections.praise ?? 'No corrections'}
+                    >
+                      ✓
+                    </span>
+                  )}
+                </div>
+                {hasFixes(entry) ? (
+                  <button
+                    type="button"
+                    className="msg-text msg-fixable"
+                    aria-expanded={selectedId === entry.id}
+                    title="Show corrections"
+                    onClick={() =>
+                      setSelectedId(selectedId === entry.id ? null : entry.id)
+                    }
+                  >
+                    <MarkedText
+                      text={entry.text}
+                      corrections={entry.corrections}
+                    />
+                  </button>
+                ) : (
+                  <div className="msg-text">
+                    {entry.text}
+                    {entry.streaming && <span className="caret" />}
+                    {entry.interrupted && ' …'}
+                  </div>
+                )}
+              </li>
+            ),
+          )}
+        </ol>
+        {typing.length > 0 && (
+          <p className="typing">{typing.join(', ')} typing…</p>
+        )}
+        <form className="chat-form" onSubmit={submit}>
+          <input
+            ref={input}
+            type="text"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onFocus={() => setChatFocused(true)}
+            onBlur={() => setChatFocused(false)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') endConversation();
+            }}
+            disabled={!connected}
+            placeholder={
+              connected ? 'Escribe un mensaje…' : 'Waiting for the connection…'
+            }
+            aria-label="Message"
+            autoComplete="off"
+            enterKeyHint="send"
+          />
+          <button type="submit" disabled={!connected || !text.trim()}>
+            Send
+          </button>
+        </form>
+      </section>
+      {selected?.corrections && hasFixes(selected) && (
+        <CorrectionsWindow
+          text={selected.text}
+          corrections={selected.corrections}
+          onClose={() => setSelectedId(null)}
+        />
+      )}
+    </div>
   );
 }

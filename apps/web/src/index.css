@@ -1,34 +1,71 @@
+/*
+ * HUD theme: sharp, flat black and white, in a light and a dark theme. Corners are square, borders
+ * are thin and there are no drop shadows. Panels dock to the screen edge, and the world fades
+ * into the panel's own background before it reaches the panel, so the two read as one flat page. The Phaser world keeps its own paper palette for now.
+ * Red, green and yellow mean something (errors, fixes, suggestions); everything else is mono.
+ */
 :root {
-  --paper: #f4f1ea;
-  --paper-2: #e6e2d6;
-  --ink: #222222;
-  --ink-soft: #5c5a54;
-  /* Red, green and yellow are reserved for corrections and actions. */
-  --red: #d23b3b;
-  --green: #2e7d32;
-  --yellow: #e5a50a;
+  --bg: #ffffff;
+  --bg-2: #f2f2f2;
+  --bg-3: #e6e6e6;
+  --line: #000000; /* outlines */
+  --hairline: #cfcfcf; /* separators inside a panel */
+  --text: #111111;
+  --text-strong: #000000;
+  --muted: #5a5a5a;
+  --accent: #000000; /* primary actions are inverted: black on white */
+  --on-accent: #ffffff;
+  --red: #c4151c;
+  --red-bg: rgba(196, 21, 28, 0.12);
+  --green: #1a7a3c;
+  --yellow-text: #8a5d00;
+  --yellow-bg: rgba(245, 176, 20, 0.28);
+
+  /*
+   * How a docked panel meets the world, in px. Going outward from the panel's edge: first
+   * --chat-margin of solid panel color, then --chat-fade of fade to the world. Set them
+   * independently (the camera reads both, so the player stays clear of the strip).
+   */
+  --chat-margin: 8px;
+  --chat-fade: 4px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --paper: #1e1d1a;
-    --paper-2: #2a2824;
-    --ink: #f0ece2;
-    --ink-soft: #a9a597;
-    --red: #ef6a6a;
-    --green: #66bb6a;
-    --yellow: #f2c14e;
+    --bg: #000000;
+    --bg-2: #121212;
+    --bg-3: #1f1f1f;
+    --line: #ffffff;
+    --hairline: #333333;
+    --text: #eeeeee;
+    --text-strong: #ffffff;
+    --muted: #a0a0a0;
+    --accent: #ffffff;
+    --on-accent: #000000;
+    --red: #ff5a60;
+    --red-bg: rgba(255, 90, 96, 0.16);
+    --green: #3ddc84;
+    --yellow-text: #ffc83d;
+    --yellow-bg: rgba(255, 200, 61, 0.16);
   }
 }
 
 :root[data-theme='dark'] {
-  --paper: #1e1d1a;
-  --paper-2: #2a2824;
-  --ink: #f0ece2;
-  --ink-soft: #a9a597;
-  --red: #ef6a6a;
-  --green: #66bb6a;
-  --yellow: #f2c14e;
+  --bg: #000000;
+  --bg-2: #121212;
+  --bg-3: #1f1f1f;
+  --line: #ffffff;
+  --hairline: #333333;
+  --text: #eeeeee;
+  --text-strong: #ffffff;
+  --muted: #a0a0a0;
+  --accent: #ffffff;
+  --on-accent: #000000;
+  --red: #ff5a60;
+  --red-bg: rgba(255, 90, 96, 0.16);
+  --green: #3ddc84;
+  --yellow-text: #ffc83d;
+  --yellow-bg: rgba(255, 200, 61, 0.16);
 }
 
 html,
@@ -55,40 +92,72 @@ body {
 .hud {
   pointer-events: none;
   padding: 12px;
-  color: var(--ink);
-  font-family: system-ui, sans-serif;
-  font-size: 14px;
+  color: var(--text);
+  font-family:
+    'gg sans',
+    'Segoe UI',
+    system-ui,
+    -apple-system,
+    'Helvetica Neue',
+    Arial,
+    sans-serif;
+  font-size: 15px;
+  line-height: 1.375;
 }
 
 .hud button,
 .hud input {
   pointer-events: auto;
   font: inherit;
-  color: var(--ink);
-  background: var(--paper);
-  border: 2px solid var(--ink);
-  border-radius: 6px;
-  padding: 4px 10px;
+  color: var(--text);
+  border-radius: 0;
+}
+
+.hud button {
+  padding: 5px 12px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  cursor: pointer;
+}
+
+.hud button:hover:not(:disabled) {
+  background: var(--text-strong);
+  color: var(--bg);
+}
+
+.hud button:focus-visible,
+.hud input:focus-visible {
+  outline: 2px solid var(--text-strong);
+  outline-offset: 2px;
 }
 
 .hud button:disabled,
 .hud input:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
+/* Top right, so it never sits under the docked chat. */
 .hud-bar {
+  position: absolute;
+  top: 12px;
+  right: 12px;
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   align-items: center;
   gap: 8px;
 }
 
 .hud-help {
   position: absolute;
-  left: 12px;
+  right: 12px;
   bottom: 8px;
   margin: 0;
-  color: var(--ink-soft);
+  padding: 2px 6px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--muted);
   font-size: 12px;
 }
 
@@ -96,17 +165,15 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
-  border: 2px solid var(--ink);
-  border-radius: 999px;
-  background: var(--paper);
+  padding: 5px 12px;
+  background: var(--bg);
+  border: 1px solid var(--line);
 }
 
 .status-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--ink-soft);
+  width: 8px;
+  height: 8px;
+  background: var(--muted);
 }
 
 .status[data-status='connected'] .status-dot {
@@ -115,27 +182,64 @@ body {
 
 .status[data-status='reconnecting'] .status-dot,
 .status[data-status='connecting'] .status-dot {
-  background: var(--yellow);
+  background: var(--yellow-text);
 }
 
 .status[data-status='offline'] .status-dot {
   background: var(--red);
 }
 
-.chat {
+/*
+ * The chat (and the corrections beside it) are docked flush to the screen edge, full height. They
+ * are part of the page, not a popup: no margin, no shadow, a thin border on the inner edge.
+ * Beside them, a strip in the panel's own background color (--chat-margin) and then a quick fade
+ * (--chat-fade) into the world, so the world dissolves into the panel. Only the windows take
+ * the mouse.
+ */
+.chat-stack {
   position: absolute;
-  top: 56px;
-  left: 12px;
-  bottom: 40px;
-  width: min(360px, calc(100vw - 24px));
+  top: 0;
+  left: 0;
+  bottom: 0;
+  display: flex;
+  align-items: stretch;
+  pointer-events: none;
+  animation: slide-in 0.25s ease-out;
+}
+
+.chat-stack::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 100%;
+  width: calc(var(--chat-margin) + var(--chat-fade));
+  background: linear-gradient(
+    to right,
+    var(--bg) var(--chat-margin),
+    transparent calc(var(--chat-margin) + var(--chat-fade))
+  );
+  pointer-events: none;
+}
+
+.window {
+  position: relative;
+  pointer-events: auto;
   display: flex;
   flex-direction: column;
-  pointer-events: auto;
-  background: var(--paper);
-  border: 2px solid var(--ink);
-  border-radius: 8px;
-  overflow: hidden;
-  animation: slide-in 0.3s ease-out;
+  min-height: 0;
+  background: var(--bg);
+  border-right: 1px solid var(--line);
+}
+
+.chat {
+  flex: none;
+  width: min(540px, 100vw);
+}
+
+.corrections-window {
+  flex: none;
+  width: min(340px, 40vw);
 }
 
 @keyframes slide-in {
@@ -145,73 +249,118 @@ body {
   }
 }
 
-.prompt {
-  position: absolute;
-  left: 50%;
-  bottom: 24px;
-  transform: translateX(-50%);
+@keyframes slide-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
 }
 
-.prompt kbd {
-  padding: 0 6px;
-  margin-right: 4px;
-  border: 2px solid var(--ink);
-  border-radius: 4px;
-  font-weight: 700;
-}
-
-.chat-head {
+/* What the window is, and how to close it. */
+.window-head {
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 8px 10px;
-  border-bottom: 2px solid var(--ink);
+  padding: 10px 12px 10px 16px;
+  border-bottom: 1px solid var(--line);
 }
 
-.chat-title {
-  font-weight: 600;
+.window-title {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--text-strong);
+  font-size: 14px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hud .window-close {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
 }
 
 .transcript {
   flex: 1;
   margin: 0;
-  padding: 8px 10px;
+  padding: 8px 6px;
   list-style: none;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 8px;
 }
 
+/* Every message is left aligned with its speaker on a line of its own, like the TUI. */
 .msg {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  max-width: 90%;
+  padding: 6px 14px;
 }
 
-.msg[data-role='user'] {
-  align-self: flex-end;
-  align-items: flex-end;
-  text-align: right;
+.msg:hover {
+  background: var(--bg-2);
 }
 
 .msg-who {
-  color: var(--ink-soft);
-  font-size: 12px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
 }
 
-.msg-expression {
-  margin-left: 6px;
+.msg-name {
+  color: var(--text-strong);
+  font-weight: 700;
+}
+
+.msg[data-role='user'] .msg-name {
+  color: var(--muted);
+}
+
+.msg-meta {
+  color: var(--muted);
+  font-size: 12px;
   font-style: italic;
 }
 
+.msg-ok {
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .msg-text {
-  padding: 6px 10px;
-  background: var(--paper-2);
-  border-radius: 8px;
+  display: block;
+  margin: 0;
+  padding: 0;
   overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+/* A message with corrections is a button: it looks like text and opens the details. */
+.hud .msg-fixable {
+  width: 100%;
+  padding: 2px 6px;
+  margin: 0 -6px;
+  background: none;
+  border: 1px solid transparent;
+  color: var(--text);
+  text-align: left;
+}
+
+.hud .msg-fixable:hover:not(:disabled) {
+  background: var(--bg-3);
+  color: var(--text);
+}
+
+.hud .msg-fixable[aria-expanded='true'] {
+  background: var(--bg-3);
+  border-color: var(--line);
 }
 
 .caret {
@@ -220,15 +369,15 @@ body {
   height: 1em;
   margin-left: 2px;
   vertical-align: text-bottom;
-  background: var(--ink);
+  background: var(--text);
   animation: blink 1s steps(2) infinite;
 }
 
 .notice {
-  color: var(--ink-soft);
-  font-size: 12px;
+  padding: 4px 14px;
+  color: var(--muted);
+  font-size: 13px;
   font-style: italic;
-  text-align: center;
 }
 
 .notice[data-tone='error'] {
@@ -237,111 +386,184 @@ body {
 
 .typing {
   margin: 0;
-  padding: 0 10px 4px;
-  color: var(--ink-soft);
+  padding: 0 20px 4px;
+  color: var(--muted);
   font-size: 12px;
 }
 
 .chat-form {
+  flex: none;
   display: flex;
-  gap: 6px;
-  padding: 8px 10px;
-  border-top: 2px solid var(--ink);
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid var(--line);
 }
 
-.chat-form input {
+.hud .chat-form input {
   flex: 1;
   min-width: 0;
+  padding: 9px 12px;
+  background: var(--bg);
+  border: 1px solid var(--line);
 }
 
-/* Corrections: red for errors, yellow for suggestions, green for the fix and praise. */
+.hud .chat-form button[type='submit'] {
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
+}
+
+.hud .chat-form button[type='submit']:hover:not(:disabled) {
+  background: var(--bg);
+  color: var(--text-strong);
+}
+
+/*
+ * Corrections, as links in the message: red for errors, yellow for suggestions.
+ * Green is for the fix itself.
+ */
 .flag {
-  background: none;
+  padding: 0 2px;
   color: inherit;
-  text-decoration: underline wavy;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
   text-underline-offset: 3px;
 }
 
 .flag[data-severity='error'] {
-  text-decoration-color: var(--red);
+  background: var(--red-bg);
+  color: var(--red);
 }
 
 .flag[data-severity='suggestion'] {
-  text-decoration-color: var(--yellow);
+  background: var(--yellow-bg);
+  color: var(--yellow-text);
 }
 
-.corrections,
-.praise {
+.corrections-body {
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.corrections-body h3 {
+  margin: 12px 0 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.corrections-body h3:first-child {
+  margin-top: 0;
+}
+
+.corrections-body p {
   margin: 0;
-  font-size: 13px;
-  text-align: left;
 }
 
-.praise {
+.corrections-better ins {
   color: var(--green);
-  font-weight: 600;
+  font-weight: 700;
+  text-decoration: none;
 }
 
-.corrections ul {
-  margin: 4px 0 0;
+.fixes {
+  margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.corrections .corrected {
-  margin: 0;
-}
-
-.corrections ins {
-  color: var(--green);
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.corrections del {
-  color: var(--red);
 }
 
 .fix {
   display: flex;
   flex-wrap: wrap;
+  align-items: baseline;
   gap: 2px 8px;
-  padding: 4px 0;
-  border-top: 1px solid var(--ink-soft);
+  padding: 8px 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.fix del {
+  color: var(--red);
 }
 
 .fix[data-severity='suggestion'] del {
-  color: var(--yellow);
+  color: var(--yellow-text);
+}
+
+.fix ins {
+  color: var(--green);
+  font-weight: 700;
+  text-decoration: none;
 }
 
 .fix-category {
-  color: var(--ink-soft);
+  padding: 0 6px;
+  border: 1px solid var(--hairline);
+  color: var(--muted);
   font-size: 11px;
   text-transform: uppercase;
 }
 
 .fix-why {
   flex-basis: 100%;
-  color: var(--ink-soft);
+  color: var(--muted);
+  font-size: 13px;
 }
 
+.corrections-body summary {
+  margin-top: 8px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+/* The way into a conversation, and the only one on touch screens. */
+.prompt {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+}
+
+.hud .prompt {
+  padding: 8px 16px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
+}
+
+.hud .prompt:hover:not(:disabled) {
+  background: var(--bg);
+  color: var(--text-strong);
+}
+
+.prompt kbd {
+  padding: 0 6px;
+  margin-right: 6px;
+  border: 1px solid currentColor;
+  font: inherit;
+  font-weight: 700;
+}
+
+/* Speech bubbles: flat square labels that sit over the speaker. */
 .bubble {
   position: absolute;
   left: 0;
   top: 0;
-  max-width: 220px;
+  max-width: 240px;
   padding: 6px 10px;
-  color: var(--ink);
-  background: var(--paper);
-  border: 2px solid var(--ink);
-  border-radius: 10px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--line);
   pointer-events: none;
   overflow-wrap: anywhere;
   will-change: transform;
 }
 
 .bubble[data-self='true'] {
-  background: var(--paper-2);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
 }
 
 .dots {
@@ -352,8 +574,7 @@ body {
 .dots i {
   width: 6px;
   height: 6px;
-  border-radius: 50%;
-  background: var(--ink);
+  background: currentColor;
   animation: blink 1s infinite;
 }
 
@@ -371,16 +592,84 @@ body {
   }
 }
 
-/* Narrow screens: the chat takes the bottom half, and the world is centered in the top half. */
+.stick {
+  position: absolute;
+  left: 24px;
+  bottom: 24px;
+  width: 96px;
+  height: 96px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid #ffffff;
+  border-radius: 50%;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.stick-thumb {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 40px;
+  height: 40px;
+  margin: -20px 0 0 -20px;
+  border-radius: 50%;
+  background: #ffffff;
+  opacity: 0.8;
+}
+
+/* Shown before the world has loaded, so it uses the world's own palette. */
+.world-status {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 24px;
+  color: #222222;
+  background: #f4f1ea;
+  font-family: system-ui, sans-serif;
+  text-align: center;
+}
+
+/* Narrow screens: the chat docks to the bottom half, and the world is centered above it. */
 @media (max-width: 700px) {
-  .chat {
+  .chat-stack {
     top: auto;
-    left: 12px;
-    right: 12px;
-    bottom: 12px;
-    width: auto;
-    height: calc(50dvh - 12px);
+    right: 0;
+    height: 50dvh;
     animation-name: slide-up;
+  }
+
+  .chat-stack::after {
+    top: auto;
+    bottom: 100%;
+    left: 0;
+    right: 0;
+    width: auto;
+    height: calc(var(--chat-margin) + var(--chat-fade));
+    background: linear-gradient(
+      to top,
+      var(--bg) var(--chat-margin),
+      transparent calc(var(--chat-margin) + var(--chat-fade))
+    );
+  }
+
+  .window {
+    border-right: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .chat {
+    width: auto;
+    flex: 1;
+  }
+
+  /* The corrections cover the chat, since there is no room beside it. */
+  .corrections-window {
+    position: absolute;
+    inset: 0;
+    width: auto;
+    z-index: 1;
   }
 
   .prompt {
@@ -389,12 +678,5 @@ body {
 
   .hud-help {
     display: none;
-  }
-}
-
-@keyframes slide-up {
-  from {
-    transform: translateY(24px);
-    opacity: 0;
   }
 }

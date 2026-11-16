@@ -6,11 +6,21 @@ import type {
   Corrections,
   EngineEvent,
   Expression,
+  NpcInfo,
 } from './types';
 
 const SESSION_ID = 'mock-session';
 export const MOCK_LEARNER_ID = 'learner';
 const LANGUAGE = 'es-MX';
+
+/** The mock's cast. `npc-demo` stands in for the TUI's Chloe. */
+const NPCS: Record<string, NpcInfo> = {
+  'npc-demo': { id: 'npc-demo', name: 'Chloe', role: 'traveler' },
+  poncho: { id: 'poncho', name: 'Poncho', role: 'vendor' },
+  maria: { id: 'maria', name: 'María', role: 'baker' },
+  rosa: { id: 'rosa', name: 'Rosa', role: 'student' },
+  alfonso: { id: 'alfonso', name: 'Alfonso', role: 'plumber' },
+};
 
 /** Short canned replies, in es-MX, per NPC. Others fall back to `generic`. */
 const REPLIES: Record<string, string[]> = {
@@ -197,6 +207,7 @@ export function createMockEngine(options: MockEngineOptions = {}): MockEngine {
   }
 
   return {
+    npcs: NPCS,
     start() {
       if (running) return;
       running = true;

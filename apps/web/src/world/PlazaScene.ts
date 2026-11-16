@@ -360,7 +360,10 @@ export class PlazaScene extends Phaser.Scene {
    */
   private applyInset(inset: ViewInset, instant: boolean) {
     const cam = this.cameras.main;
-    const goal = followOffsetForInset(inset, cam.zoom);
+    const goal = followOffsetForInset(inset, cam.zoom, undefined, {
+      width: cam.width,
+      height: cam.height,
+    });
     this.insetTween?.stop();
     const apply = () =>
       cam.setFollowOffset(this.followOffset.x, this.followOffset.y);

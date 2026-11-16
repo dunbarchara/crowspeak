@@ -39,6 +39,14 @@ export interface Corrections {
   more: CorrectionItem[];
 }
 
+/** Who an NPC is, for display: the chat title and speaker names. */
+export interface NpcInfo {
+  id: string;
+  name: string;
+  /** A short descriptor such as "baker", shown in parentheses after the name. */
+  role: string | null;
+}
+
 export interface EngineMessage {
   id: string;
   role: Role;
