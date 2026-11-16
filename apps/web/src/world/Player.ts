@@ -1,8 +1,7 @@
 import type Phaser from 'phaser';
 import { entityDepth } from '../lib/depth';
 import type { Footprint, Vec2 } from '../lib/geometry';
-
-const INK = 0x222222;
+import { type Themer } from './palette';
 
 /** The box at the player's feet that collides with the world, separate from the sprite. */
 export const PLAYER_FOOTPRINT: Footprint = { halfW: 10, halfH: 5 };
@@ -19,18 +18,25 @@ export class Player {
   /** The elevation level the player stands on; picks which collision grid applies. */
   level: number;
 
-  constructor(scene: Phaser.Scene, position: Vec2, level = 0) {
+  constructor(scene: Phaser.Scene, themer: Themer, position: Vec2, level = 0) {
     this.level = level;
-    this.shadow = scene.add.ellipse(0, 0, 28, 12, INK, 0.25);
-    this.body = scene.add.rectangle(0, 0, 20, 34, INK);
+    this.shadow = scene.add.ellipse(0, 0, 28, 12);
+    this.body = scene.add.rectangle(0, 0, 20, 34);
+    themer.bind((p) => {
+      this.shadow.setFillStyle(p.line, 0.15);
+      this.body.setFillStyle(p.line);
+    });
     this.position = position;
     this.moveTo(position);
   }
 
   moveTo(position: Vec2): void {
     this.position = position;
-    this.shadow.setPosition(position.x, position.y);
-    this.body.setPosition(position.x, position.y - 17);
+    // Drawn on whole pixels so the edges stay sharp; `position` itself stays exact.
+    const x = Math.round(position.x);
+    const y = Math.round(position.y);
+    this.shadow.setPosition(x, y);
+    this.body.setPosition(x, y - 17);
     this.applyDepth();
   }
 

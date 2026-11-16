@@ -27,17 +27,13 @@ import { appEvents } from '../store/channel';
 import { useGameStore } from '../store/useGameStore';
 import { followOffsetForInset, type ViewInset } from '../lib/viewInset';
 import { Npc } from './Npc';
+import { type Palette, Themer, cssColor } from './palette';
 import { PLAYER_FOOTPRINT, Player } from './Player';
 import { screenAnchors } from './screenAnchors';
 import { virtualStick } from './virtualStick';
 
-const INK = 0x222222;
-const PAPER = 0xf4f1ea;
-const TERRACE = 0xe6e2d6;
-const STONE = 0xcfcabd;
-const CLIFF = 0x9d978a;
-const STAIRS = 0xd9d4c7;
 const DEBUG = 0xd23b3b;
+const FONT = "'gg sans', 'Segoe UI', system-ui, sans-serif";
 
 const SPEED = 160; // world pixels per second
 
@@ -47,12 +43,17 @@ const DEPTH_DECOR = GROUND_DEPTH + 1_000; // flat decoration such as cliff faces
 const DEPTH_DEBUG = 100_000;
 const DEBUG_REGION = 0x1565c0;
 
-const FILL: Record<string, number> = {
-  building: STONE,
-  pillar: STONE,
-  'arch-top': STONE,
-  cliff: CLIFF,
-  fountain: PAPER,
+/**
+ * Fill by prop kind, as a palette key. Like the HUD it is flat black and white: ground is the
+ * page color, and each step of grey is something standing on it. Outlines are always 1px.
+ */
+type Fill = 'bg' | 'bg2' | 'bg3' | 'muted';
+const FILL: Record<string, Fill> = {
+  building: 'bg3',
+  pillar: 'bg3',
+  'arch-top': 'bg3',
+  cliff: 'muted',
+  fountain: 'bg',
 };
 const FLAT_KINDS = new Set(['cliff']);
 
@@ -70,6 +71,7 @@ const FLAT_KINDS = new Set(['cliff']);
 export class PlazaScene extends Phaser.Scene {
   private definition!: WorldDefinition;
   private world!: LevelWorld;
+  private themer!: Themer;
   private footprintBottom = new Map<string, number>();
   private player!: Player;
   private npcs: Npc[] = [];
@@ -96,51 +98,77 @@ export class PlazaScene extends Phaser.Scene {
     );
   }
 
+  /**
+   * A 1px outlined box covering exactly `rect`. Phaser centers a stroke on the edge, so the
+   * shape is pulled in by half a pixel: the line then fills one row of device-independent
+   * pixels instead of blurring across two.
+   */
+  private box(
+    rect: { x: number; y: number; w: number; h: number },
+    fill: (p: Palette) => number,
+    depth: number,
+  ) {
+    const { x, y, w, h } = rect;
+    const shape = this.add
+      .rectangle(x + w / 2, y + h / 2, w - 1, h - 1)
+      .setDepth(depth);
+    this.themer.bind((p) =>
+      shape.setFillStyle(fill(p)).setStrokeStyle(1, p.line),
+    );
+    return shape;
+  }
+
   create() {
+    const dpr = 1 / this.scale.zoom;
+    this.cameras.main.setZoom(dpr);
+    this.themer = new Themer((p) =>
+      this.cameras.main.setBackgroundColor(cssColor(p.bg)),
+    );
+    this.cameras.main.setBackgroundColor(cssColor(this.themer.palette.bg));
     this.drawGround();
 
     for (const p of this.definition.props) {
-      const { x, y, w, h } = p.rect;
-      const box = this.add
-        .rectangle(x + w / 2, y + h / 2, w, h, FILL[p.kind] ?? STONE)
-        .setStrokeStyle(2, INK);
-      if (FLAT_KINDS.has(p.kind)) {
-        box.setDepth(DEPTH_DECOR);
-      } else {
-        // Sort by the footprint's bottom edge, like the player's feet, so walking in front
-        // of or behind an object works whatever its sprite looks like.
-        box.setDepth(
-          entityDepth(
+      const { y, h } = p.rect;
+      const key = FILL[p.kind] ?? 'bg3';
+      // Flat things sit on the ground. Others sort by the footprint's bottom edge, like the
+      // player's feet, so walking in front of or behind an object works whatever its sprite
+      // looks like.
+      const depth = FLAT_KINDS.has(p.kind)
+        ? DEPTH_DECOR
+        : entityDepth(
             p.level,
             this.footprintBottom.get(p.footprint ?? '') ?? y + h,
-          ),
-        );
-      }
+          );
+      this.box(p.rect, (pal) => pal[key], depth);
     }
     for (const o of this.definition.overhead) {
-      const { x, y, w, h } = o.rect;
-      this.add
-        .rectangle(x + w / 2, y + h / 2, w, h, FILL[o.kind] ?? STONE)
-        .setStrokeStyle(2, INK)
-        .setDepth(overheadDepth(o.level));
+      const key = FILL[o.kind] ?? 'bg3';
+      this.box(o.rect, (pal) => pal[key], overheadDepth(o.level));
     }
 
-    this.npcs = this.definition.npcAnchors.map((a) => new Npc(this, a));
+    this.npcs = this.definition.npcAnchors.map(
+      (a) => new Npc(this, this.themer, a),
+    );
 
     const spawn =
       this.definition.spawns.find((s) => s.id === 'player') ??
       this.definition.spawns[0];
     if (!spawn) throw new Error('The plaza map needs a "player" spawn');
-    this.player = new Player(this, spawn.position, spawn.level);
+    this.player = new Player(this, this.themer, spawn.position, spawn.level);
     this.cameras.main.startFollow(this.player.body, true, 0.15, 0.15);
     this.marker = this.add
       .circle(0, 0, 6)
-      .setStrokeStyle(2, INK)
       .setVisible(false)
       .setDepth(DEPTH_DEBUG);
+    this.themer.bind((p) => this.marker.setStrokeStyle(1, p.line));
     this.debug = this.add.graphics().setDepth(DEPTH_DEBUG);
     this.debugText = this.add
-      .text(8, 8, '', { color: '#d23b3b', fontSize: '14px' })
+      .text(8, 8, '', {
+        color: '#d23b3b',
+        fontFamily: FONT,
+        fontSize: '14px',
+        resolution: dpr,
+      })
       .setScrollFactor(0)
       .setDepth(DEPTH_DEBUG)
       .setVisible(false);
@@ -233,6 +261,7 @@ export class PlazaScene extends Phaser.Scene {
     // away must not leave its last target in the store, or a leaked listener behind.
     const cleanup = () => {
       unsubscribeStore();
+      this.themer.destroy();
       this.game?.events.off(
         Phaser.Core.Events.POST_RENDER,
         this.publishAnchors,
@@ -248,29 +277,31 @@ export class PlazaScene extends Phaser.Scene {
   /** Level ground, bridge decks and the stair treads. Lower levels draw first. */
   private drawGround() {
     for (const r of this.definition.regions) {
-      const { x, y, w, h } = r.rect;
       if (r.elevated) {
         this.drawDeck(r.level, r.rect);
         continue;
       }
-      this.add
-        .rectangle(x + w / 2, y + h / 2, w, h, r.level === 0 ? PAPER : TERRACE)
-        .setStrokeStyle(2, INK)
-        .setDepth(GROUND_DEPTH + r.level);
+      // The lowest level is the page color, the same as the chat; each level up is a step darker.
+      this.box(
+        r.rect,
+        (p) => (r.level === 0 ? p.bg : p.bg2),
+        GROUND_DEPTH + r.level,
+      );
     }
     for (const s of this.definition.stairs) {
       const { x, y, w, h } = s.rect;
-      this.add
-        .rectangle(x + w / 2, y + h / 2, w, h, STAIRS)
-        .setStrokeStyle(2, INK)
-        .setDepth(DEPTH_STAIRS);
+      this.box(s.rect, (p) => p.bg2, DEPTH_STAIRS);
       const treads = this.add.graphics().setDepth(DEPTH_STAIRS + 1);
-      treads.lineStyle(1, INK, 0.6);
       const vertical = s.highEdge === 'n' || s.highEdge === 's';
-      for (let t = 16; t < (vertical ? h : w); t += 16) {
-        if (vertical) treads.lineBetween(x, y + t, x + w, y + t);
-        else treads.lineBetween(x + t, y, x + t, y + h);
-      }
+      // Treads are 1px lines on the pixel grid (+0.5), in the HUD's hairline grey.
+      this.themer.bind((p) => {
+        treads.clear().lineStyle(1, p.hairline, 1);
+        for (let t = 16; t < (vertical ? h : w); t += 16) {
+          if (vertical)
+            treads.lineBetween(x + 1, y + t + 0.5, x + w - 1, y + t + 0.5);
+          else treads.lineBetween(x + t + 0.5, y + 1, x + t + 0.5, y + h - 1);
+        }
+      });
     }
   }
 
@@ -290,25 +321,22 @@ export class PlazaScene extends Phaser.Scene {
     const deck = lengthwiseY
       ? { x, y: y - bleed, w, h: h + 2 * bleed }
       : { x: x - bleed, y, w: w + 2 * bleed, h };
-    this.add
-      .rectangle(
-        deck.x + deck.w / 2,
-        deck.y + deck.h / 2,
-        deck.w,
-        deck.h,
-        TERRACE,
-      )
-      .setAlpha(0.95)
+    const fill = this.add
+      .rectangle(deck.x + deck.w / 2, deck.y + deck.h / 2, deck.w, deck.h)
       .setDepth(deckDepth(level));
     const rails = this.add.graphics().setDepth(deckDepth(level) + 1);
-    rails.lineStyle(3, INK, 1);
-    if (lengthwiseY) {
-      rails.lineBetween(x, y, x, y + h);
-      rails.lineBetween(x + w, y, x + w, y + h);
-    } else {
-      rails.lineBetween(x, y, x + w, y);
-      rails.lineBetween(x, y + h, x + w, y + h);
-    }
+    this.themer.bind((p) => {
+      fill.setFillStyle(p.bg2);
+      rails.clear().lineStyle(1, p.line, 1);
+      // Rails sit just inside the deck's edge, on whole pixels.
+      if (lengthwiseY) {
+        rails.lineBetween(x + 0.5, y, x + 0.5, y + h);
+        rails.lineBetween(x + w - 0.5, y, x + w - 0.5, y + h);
+      } else {
+        rails.lineBetween(x, y + 0.5, x + w, y + 0.5);
+        rails.lineBetween(x, y + h - 0.5, x + w, y + h - 0.5);
+      }
+    });
   }
 
   update(_time: number, delta: number) {
@@ -360,9 +388,11 @@ export class PlazaScene extends Phaser.Scene {
    */
   private applyInset(inset: ViewInset, instant: boolean) {
     const cam = this.cameras.main;
-    const goal = followOffsetForInset(inset, cam.zoom, undefined, {
-      width: cam.width,
-      height: cam.height,
+    // The inset and the offset are in CSS pixels, which equal world units at the camera's
+    // base scale; the canvas itself is `zoom` times bigger than its CSS box.
+    const goal = followOffsetForInset(inset, 1, undefined, {
+      width: cam.width / cam.zoom,
+      height: cam.height / cam.zoom,
     });
     this.insetTween?.stop();
     const apply = () =>
@@ -385,9 +415,10 @@ export class PlazaScene extends Phaser.Scene {
   /** Where each NPC's head and the player's head are on screen, for speech bubbles. */
   private publishAnchors() {
     const cam = this.cameras.main;
+    // World units are CSS pixels (the camera zoom is the pixel ratio), so no scaling needed.
     const head = (x: number, y: number) => ({
-      x: (x - cam.worldView.x) * cam.zoom,
-      y: (y - cam.worldView.y) * cam.zoom,
+      x: x - cam.worldView.x,
+      y: y - cam.worldView.y,
     });
     for (const npc of this.npcs) {
       screenAnchors.set(npc.npcId, head(npc.position.x, npc.position.y - 44));

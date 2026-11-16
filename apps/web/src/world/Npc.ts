@@ -2,10 +2,9 @@ import type Phaser from 'phaser';
 import { entityDepth } from '../lib/depth';
 import type { ProximityNpc } from '../lib/proximity';
 import type { NpcAnchor } from '../lib/world';
+import { type Palette, type Themer, cssColor } from './palette';
 
-const INK = 0x222222;
-const PAPER = 0xf4f1ea;
-const HIGHLIGHT = 0xe5a50a;
+const FONT = "'gg sans', 'Segoe UI', system-ui, sans-serif";
 
 /**
  * Placeholder NPC: a rectangle with a shadow and its id as a label, standing with its feet at
@@ -21,31 +20,54 @@ export class Npc implements ProximityNpc {
   private readonly body: Phaser.GameObjects.Rectangle;
   private readonly shadow: Phaser.GameObjects.Ellipse;
   private readonly label: Phaser.GameObjects.Text;
+  private highlighted = false;
+  private palette!: Palette;
 
-  constructor(scene: Phaser.Scene, anchor: NpcAnchor) {
+  constructor(scene: Phaser.Scene, themer: Themer, anchor: NpcAnchor) {
     this.npcId = anchor.npcId;
     this.groupId = anchor.groupId;
     this.position = { ...anchor.position };
     this.level = anchor.level;
-    this.shadow = scene.add.ellipse(0, 0, 32, 14, INK, 0.25);
-    this.body = scene.add.rectangle(0, 0, 22, 34, PAPER).setStrokeStyle(2, INK);
+    this.shadow = scene.add.ellipse(0, 0, 32, 14);
+    // 1px outline drawn half a pixel in, so it covers exactly one row of pixels.
+    this.body = scene.add.rectangle(0, 0, 21, 33);
     this.label = scene.add
-      .text(0, 0, anchor.npcId, { color: '#222222', fontSize: '12px' })
+      .text(0, 0, anchor.npcId, {
+        fontFamily: FONT,
+        fontSize: '12px',
+        // Text is rasterised once, so it needs the screen's pixel ratio to stay sharp.
+        resolution: 1 / scene.scale.zoom,
+      })
       .setOrigin(0.5, 1);
+    themer.bind((p) => {
+      this.palette = p;
+      this.label.setColor(cssColor(p.line));
+      this.body.setFillStyle(p.bg).setStrokeStyle(1, p.line);
+      this.paintShadow();
+    });
     this.place();
   }
 
   /** A highlighted shadow marks an NPC the learner is about to talk to. */
   setHighlighted(on: boolean): void {
-    if (on) this.shadow.setFillStyle(HIGHLIGHT, 0.9).setStrokeStyle(2, INK);
-    else this.shadow.setFillStyle(INK, 0.25).setStrokeStyle();
+    this.highlighted = on;
+    this.paintShadow();
+  }
+
+  private paintShadow(): void {
+    const p = this.palette;
+    if (this.highlighted) {
+      this.shadow.setFillStyle(p.yellow, 0.9).setStrokeStyle(1, p.line);
+    } else this.shadow.setFillStyle(p.line, 0.15).setStrokeStyle();
   }
 
   private place(): void {
     const { x, y } = this.position;
     const depth = entityDepth(this.level, y);
-    this.shadow.setPosition(x, y).setDepth(depth - 1);
-    this.body.setPosition(x, y - 17).setDepth(depth);
-    this.label.setPosition(x, y - 38).setDepth(depth);
+    const px = Math.round(x);
+    const py = Math.round(y);
+    this.shadow.setPosition(px, py).setDepth(depth - 1);
+    this.body.setPosition(px, py - 17).setDepth(depth);
+    this.label.setPosition(px, py - 38).setDepth(depth);
   }
 }

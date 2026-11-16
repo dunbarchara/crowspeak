@@ -1,7 +1,8 @@
 /*
  * HUD theme: sharp, flat black and white, in a light and a dark theme. Corners are square, borders
  * are thin and there are no drop shadows. Panels dock to the screen edge, and the world fades
- * into the panel's own background before it reaches the panel, so the two read as one flat page. The Phaser world keeps its own paper palette for now.
+ * into the panel's own background before it reaches the panel, so the two read as one flat page. The Phaser world reads these same tokens
+ * (world/palette.ts), so it follows the theme too.
  * Red, green and yellow mean something (errors, fixes, suggestions); everything else is mono.
  */
 :root {
@@ -27,7 +28,7 @@
    * independently (the camera reads both, so the player stays clear of the strip).
    */
   --chat-margin: 8px;
-  --chat-fade: 4px;
+  --chat-fade: 1px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -78,7 +79,7 @@ body,
 
 body {
   overflow: hidden;
-  background: #111;
+  background: var(--bg);
 }
 
 .app,
@@ -617,7 +618,7 @@ body {
   opacity: 0.8;
 }
 
-/* Shown before the world has loaded, so it uses the world's own palette. */
+/* Shown before the world has loaded. */
 .world-status {
   position: absolute;
   inset: 0;
@@ -625,8 +626,8 @@ body {
   place-items: center;
   margin: 0;
   padding: 24px;
-  color: #222222;
-  background: #f4f1ea;
+  color: var(--text);
+  background: var(--bg);
   font-family: system-ui, sans-serif;
   text-align: center;
 }
