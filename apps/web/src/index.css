@@ -77,16 +77,31 @@ body,
   margin: 0;
 }
 
+html,
 body {
   overflow: hidden;
+  overscroll-behavior: none;
+}
+
+body {
   background: var(--bg);
 }
 
-.app,
+/* Fixed, not absolute: the app must never move if the document is scrolled by a focus change. */
+.app {
+  position: fixed;
+  inset: 0;
+}
+
 .world,
 .hud {
   position: absolute;
   inset: 0;
+}
+
+/* A canvas is inline by default, which leaves a few pixels of line gap beneath it. */
+.world canvas {
+  display: block;
 }
 
 /* The HUD sits over the canvas; only its controls take pointer events. */
