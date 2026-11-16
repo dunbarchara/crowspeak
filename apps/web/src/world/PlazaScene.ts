@@ -24,8 +24,10 @@ import {
 import type { WorldDefinition } from '../lib/world';
 import type { LoadedWorld } from '../lib/worldLoader';
 import { appEvents } from '../store/channel';
+import { useGameStore } from '../store/useGameStore';
 import { Npc } from './Npc';
 import { PLAYER_FOOTPRINT, Player } from './Player';
+import { screenAnchors } from './screenAnchors';
 import { virtualStick } from './virtualStick';
 
 const INK = 0x222222;
@@ -183,9 +185,43 @@ export class PlazaScene extends Phaser.Scene {
       },
     );
 
+    // While the chat input has focus, the world must not read (or swallow) the keyboard, or
+    // typing "w" would walk the player. Phaser's key captures are global, so lift them too.
+    const setKeyboardActive = (active: boolean) => {
+      keyboard.enabled = active;
+      if (active) keyboard.enableGlobalCapture();
+      else {
+        keyboard.disableGlobalCapture();
+        keyboard.resetKeys();
+      }
+    };
+    let chatFocused = useGameStore.getState().chatFocused;
+    setKeyboardActive(!chatFocused);
+    const unsubscribeStore = useGameStore.subscribe((state) => {
+      if (state.chatFocused === chatFocused) return;
+      chatFocused = state.chatFocused;
+      setKeyboardActive(!chatFocused);
+    });
+
+    // Tell the HUD where speech bubbles go. After rendering, the camera and the sprites agree.
+    this.game.events.on(
+      Phaser.Core.Events.POST_RENDER,
+      this.publishAnchors,
+      this,
+    );
+
     // `game.destroy()` emits DESTROY, not SHUTDOWN, so listen for both. A scene that goes
-    // away must not leave its last target in the store.
-    const cleanup = () => appEvents.emit('target:changed', { target: null });
+    // away must not leave its last target in the store, or a leaked listener behind.
+    const cleanup = () => {
+      unsubscribeStore();
+      this.game?.events.off(
+        Phaser.Core.Events.POST_RENDER,
+        this.publishAnchors,
+        this,
+      );
+      screenAnchors.clear();
+      appEvents.emit('target:changed', { target: null });
+    };
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanup);
     this.events.once(Phaser.Scenes.Events.DESTROY, cleanup);
   }
@@ -292,6 +328,20 @@ export class PlazaScene extends Phaser.Scene {
 
     this.updateTarget();
     if (this.debugOn) this.drawDebug();
+  }
+
+  /** Where each NPC's head and the player's head are on screen, for speech bubbles. */
+  private publishAnchors() {
+    const cam = this.cameras.main;
+    const head = (x: number, y: number) => ({
+      x: (x - cam.worldView.x) * cam.zoom,
+      y: (y - cam.worldView.y) * cam.zoom,
+    });
+    for (const npc of this.npcs) {
+      screenAnchors.set(npc.npcId, head(npc.position.x, npc.position.y - 44));
+    }
+    const { x, y } = this.player.position;
+    screenAnchors.set('player', head(x, y - 40));
   }
 
   /** Recompute who the learner would talk to; on a change, highlight them and tell the app. */

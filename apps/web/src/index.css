@@ -1,3 +1,36 @@
+:root {
+  --paper: #f4f1ea;
+  --paper-2: #e6e2d6;
+  --ink: #222222;
+  --ink-soft: #5c5a54;
+  /* Red, green and yellow are reserved for corrections and actions. */
+  --red: #d23b3b;
+  --green: #2e7d32;
+  --yellow: #e5a50a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --paper: #1e1d1a;
+    --paper-2: #2a2824;
+    --ink: #f0ece2;
+    --ink-soft: #a9a597;
+    --red: #ef6a6a;
+    --green: #66bb6a;
+    --yellow: #f2c14e;
+  }
+}
+
+:root[data-theme='dark'] {
+  --paper: #1e1d1a;
+  --paper-2: #2a2824;
+  --ink: #f0ece2;
+  --ink-soft: #a9a597;
+  --red: #ef6a6a;
+  --green: #66bb6a;
+  --yellow: #f2c14e;
+}
+
 html,
 body,
 #root {
@@ -22,12 +55,317 @@ body {
 .hud {
   pointer-events: none;
   padding: 12px;
-  color: #222;
+  color: var(--ink);
   font-family: system-ui, sans-serif;
+  font-size: 14px;
 }
 
-.hud button {
+.hud button,
+.hud input {
   pointer-events: auto;
+  font: inherit;
+  color: var(--ink);
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+  padding: 4px 10px;
+}
+
+.hud button:disabled,
+.hud input:disabled {
+  opacity: 0.5;
+}
+
+.hud-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.hud-help {
+  position: absolute;
+  left: 12px;
+  bottom: 8px;
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--paper);
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ink-soft);
+}
+
+.status[data-status='connected'] .status-dot {
+  background: var(--green);
+}
+
+.status[data-status='reconnecting'] .status-dot,
+.status[data-status='connecting'] .status-dot {
+  background: var(--yellow);
+}
+
+.status[data-status='offline'] .status-dot {
+  background: var(--red);
+}
+
+.chat {
+  position: absolute;
+  top: 56px;
+  right: 12px;
+  bottom: 40px;
+  width: min(360px, calc(100vw - 24px));
+  display: flex;
+  flex-direction: column;
+  pointer-events: auto;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.chat[data-open='false'] {
+  bottom: auto;
+}
+
+.chat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 2px solid var(--ink);
+}
+
+.chat-title {
+  font-weight: 600;
+}
+
+.chat[data-open='false'] .chat-head {
+  border-bottom: 0;
+}
+
+.transcript {
+  flex: 1;
+  margin: 0;
+  padding: 8px 10px;
+  list-style: none;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.msg {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 90%;
+}
+
+.msg[data-role='user'] {
+  align-self: flex-end;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.msg-who {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.msg-expression {
+  margin-left: 6px;
+  font-style: italic;
+}
+
+.msg-text {
+  padding: 6px 10px;
+  background: var(--paper-2);
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+}
+
+.caret {
+  display: inline-block;
+  width: 6px;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: var(--ink);
+  animation: blink 1s steps(2) infinite;
+}
+
+.notice {
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-style: italic;
+  text-align: center;
+}
+
+.notice[data-tone='error'] {
+  color: var(--red);
+}
+
+.typing {
+  margin: 0;
+  padding: 0 10px 4px;
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.chat-form {
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px;
+  border-top: 2px solid var(--ink);
+}
+
+.chat-form input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Corrections: red for errors, yellow for suggestions, green for the fix and praise. */
+.flag {
+  background: none;
+  color: inherit;
+  text-decoration: underline wavy;
+  text-underline-offset: 3px;
+}
+
+.flag[data-severity='error'] {
+  text-decoration-color: var(--red);
+}
+
+.flag[data-severity='suggestion'] {
+  text-decoration-color: var(--yellow);
+}
+
+.corrections,
+.praise {
+  margin: 0;
+  font-size: 13px;
+  text-align: left;
+}
+
+.praise {
+  color: var(--green);
+  font-weight: 600;
+}
+
+.corrections ul {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.corrections .corrected {
+  margin: 0;
+}
+
+.corrections ins {
+  color: var(--green);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.corrections del {
+  color: var(--red);
+}
+
+.fix {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  padding: 4px 0;
+  border-top: 1px solid var(--ink-soft);
+}
+
+.fix[data-severity='suggestion'] del {
+  color: var(--yellow);
+}
+
+.fix-category {
+  color: var(--ink-soft);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.fix-why {
+  flex-basis: 100%;
+  color: var(--ink-soft);
+}
+
+.bubble {
+  position: absolute;
+  left: 0;
+  top: 0;
+  max-width: 220px;
+  padding: 6px 10px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  pointer-events: none;
+  overflow-wrap: anywhere;
+  will-change: transform;
+}
+
+.bubble[data-self='true'] {
+  background: var(--paper-2);
+}
+
+.dots {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink);
+  animation: blink 1s infinite;
+}
+
+.dots i:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.dots i:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.2;
+  }
+}
+
+/* Narrow screens: the chat docks at the top, so the bottom stays free for the stick. */
+@media (max-width: 700px) {
+  .chat {
+    top: 96px;
+    right: 12px;
+    left: 12px;
+    bottom: auto;
+    width: auto;
+    max-height: 38vh;
+  }
 }
 
 .stick {
@@ -36,7 +374,7 @@ body {
   bottom: 24px;
   width: 96px;
   height: 96px;
-  border: 2px solid #222;
+  border: 2px solid var(--ink);
   border-radius: 50%;
   pointer-events: auto;
   touch-action: none;
@@ -50,7 +388,7 @@ body {
   height: 40px;
   margin: -20px 0 0 -20px;
   border-radius: 50%;
-  background: #222;
+  background: var(--ink);
   opacity: 0.6;
 }
 
