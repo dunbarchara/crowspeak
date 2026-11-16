@@ -3,6 +3,7 @@ import { engineClient } from '../engine';
 import type { ConnectionStatus } from '../engine/types';
 import { useGameStore } from '../store/useGameStore';
 import { ChatPanel } from './ChatPanel';
+import { InteractPrompt } from './InteractPrompt';
 import { SpeechBubbles } from './SpeechBubbles';
 import { VirtualStick } from './VirtualStick';
 import { type ThemeChoice, applyTheme, loadTheme, nextTheme } from './theme';
@@ -27,6 +28,7 @@ export function Hud() {
   const voiceEnabled = useGameStore((state) => state.voiceEnabled);
   const setVoiceEnabled = useGameStore((state) => state.setVoiceEnabled);
   const connection = useGameStore((state) => state.chat.connection);
+  const inConversation = useGameStore((state) => state.conversation !== null);
   const [showStick] = useState(wantsStick);
   const [theme, setTheme] = useState<ThemeChoice>(loadTheme);
 
@@ -61,12 +63,14 @@ export function Hud() {
         )}
       </div>
       <ChatPanel />
+      <InteractPrompt />
       <SpeechBubbles />
       {showStick ? (
-        <VirtualStick />
+        // The chat takes the bottom of a small screen, so the stick steps aside while it is open.
+        !inConversation && <VirtualStick />
       ) : (
         <p className="hud-help">
-          Move: WASD, arrows or click. G: debug overlay.
+          Move: WASD, arrows or click. E: talk. G: debug overlay.
         </p>
       )}
     </div>

@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { setVirtualStick } from '../world/virtualStick';
 
 const RADIUS = 40;
@@ -21,6 +21,9 @@ export function VirtualStick() {
     thumb.current!.style.transform = `translate(${dx}px, ${dy}px)`;
     setVirtualStick(dx / RADIUS, dy / RADIUS);
   };
+
+  // If the stick disappears mid-touch, do not leave the player walking.
+  useEffect(() => () => setVirtualStick(0, 0), []);
 
   const release = () => {
     thumb.current!.style.transform = '';

@@ -25,6 +25,7 @@ import type { WorldDefinition } from '../lib/world';
 import type { LoadedWorld } from '../lib/worldLoader';
 import { appEvents } from '../store/channel';
 import { useGameStore } from '../store/useGameStore';
+import { followOffsetForInset, type ViewInset } from '../lib/viewInset';
 import { Npc } from './Npc';
 import { PLAYER_FOOTPRINT, Player } from './Player';
 import { screenAnchors } from './screenAnchors';
@@ -73,6 +74,8 @@ export class PlazaScene extends Phaser.Scene {
   private player!: Player;
   private npcs: Npc[] = [];
   private target: ConversationTarget | null = null;
+  private followOffset = { x: 0, y: 0 };
+  private insetTween?: Phaser.Tweens.Tween;
   private path: Vec2[] = [];
   private marker!: Phaser.GameObjects.Arc;
   private debug!: Phaser.GameObjects.Graphics;
@@ -163,6 +166,8 @@ export class PlazaScene extends Phaser.Scene {
         pointer: Phaser.Input.Pointer,
         over: Phaser.GameObjects.GameObject[],
       ) => {
+        // Clicking the world leaves the conversation, and the click still walks somewhere.
+        useGameStore.getState().endConversation();
         if (over.length > 0) return;
         const grid = this.world.grids[0];
         const goalCell = worldToCell(grid, pointer.worldX, pointer.worldY);
@@ -196,12 +201,26 @@ export class PlazaScene extends Phaser.Scene {
       }
     };
     let chatFocused = useGameStore.getState().chatFocused;
+    let inset = useGameStore.getState().viewInset;
     setKeyboardActive(!chatFocused);
+    this.applyInset(inset, true);
     const unsubscribeStore = useGameStore.subscribe((state) => {
-      if (state.chatFocused === chatFocused) return;
-      chatFocused = state.chatFocused;
-      setKeyboardActive(!chatFocused);
+      if (state.chatFocused !== chatFocused) {
+        chatFocused = state.chatFocused;
+        setKeyboardActive(!chatFocused);
+      }
+      if (state.viewInset !== inset) {
+        inset = state.viewInset;
+        this.applyInset(inset, false);
+      }
     });
+
+    // E starts a conversation with whoever is in range; Escape ends it. Adding the keys also
+    // captures them, so the "e" is not typed into the chat input that opens in response.
+    const interact = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+    interact.on('down', () => useGameStore.getState().startConversation());
+    const leave = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+    leave.on('down', () => useGameStore.getState().endConversation());
 
     // Tell the HUD where speech bubbles go. After rendering, the camera and the sprites agree.
     this.game.events.on(
@@ -299,6 +318,11 @@ export class PlazaScene extends Phaser.Scene {
     const grid = this.world.grids[this.player.level];
 
     if (input.x !== 0 || input.y !== 0) {
+      // Walking somewhere else leaves the conversation. (Typing in the chat never gets here:
+      // the keyboard is off while the input has focus.)
+      if (useGameStore.getState().conversation) {
+        useGameStore.getState().endConversation();
+      }
       // Manual input cancels any tap-to-move in progress.
       this.path = [];
       this.marker.setVisible(false);
@@ -330,6 +354,31 @@ export class PlazaScene extends Phaser.Scene {
     if (this.debugOn) this.drawDebug();
   }
 
+  /**
+   * Slide the camera so the player sits in the middle of the screen that the HUD leaves free
+   * (for example to the right of the chat). `instant` skips the animation, for the first frame.
+   */
+  private applyInset(inset: ViewInset, instant: boolean) {
+    const cam = this.cameras.main;
+    const goal = followOffsetForInset(inset, cam.zoom);
+    this.insetTween?.stop();
+    const apply = () =>
+      cam.setFollowOffset(this.followOffset.x, this.followOffset.y);
+    if (instant) {
+      this.followOffset = goal;
+      apply();
+      return;
+    }
+    this.insetTween = this.tweens.add({
+      targets: this.followOffset,
+      x: goal.x,
+      y: goal.y,
+      duration: 350,
+      ease: 'Sine.easeInOut',
+      onUpdate: apply,
+    });
+  }
+
   /** Where each NPC's head and the player's head are on screen, for speech bubbles. */
   private publishAnchors() {
     const cam = this.cameras.main;
@@ -356,7 +405,11 @@ export class PlazaScene extends Phaser.Scene {
   }
 
   private readInput(): Vec2 {
+    // Typing in the chat must never walk the player, whatever Phaser thinks the keys are doing.
+    // The stick is separate: it is a touch control, not a key.
+    const typing = useGameStore.getState().chatFocused;
     const { cursors, wasd } = this;
+    if (typing) return { x: virtualStick.x, y: virtualStick.y };
     const x =
       Number(cursors.right.isDown || wasd.d.isDown) -
       Number(cursors.left.isDown || wasd.a.isDown);
